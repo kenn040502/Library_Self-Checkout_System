@@ -101,9 +101,9 @@ function InterestPicker({ initial, onSave, onClose, isOnboarding }: PickerProps)
         )}
       </div>
 
-      {/* RedNote-style horizontal pill bar */}
+      {/* Topic pill bar */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="flex flex-wrap gap-2 pb-1">
+        <div className="grid grid-cols-2 gap-2 pb-1">
           {TOPICS.map((t) => {
             const on = sel.includes(t.id);
             return (
@@ -111,14 +111,13 @@ function InterestPicker({ initial, onSave, onClose, isOnboarding }: PickerProps)
                 key={t.id}
                 type="button"
                 onClick={() => toggle(t.id)}
-                className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-150 active:scale-[0.96] ${
+                className={`w-full rounded-full px-3 py-1.5 text-xs font-semibold text-center transition-all duration-150 active:scale-[0.96] ${
                   on
-                    ? 'bg-swin-red text-white shadow-md shadow-swin-red/30'
-                    : 'bg-white/[0.09] text-white/60 hover:bg-white/[0.15] hover:text-white'
+                    ? 'bg-swin-red text-white shadow-sm shadow-swin-red/30'
+                    : 'bg-white/[0.09] text-white/50 hover:bg-white/[0.15] hover:text-white'
                 }`}
               >
-                <span className="text-base leading-none">{t.emoji}</span>
-                <span>{t.label}</span>
+                {t.label}
               </button>
             );
           })}
@@ -397,14 +396,13 @@ export default function YouTubeReelsFeed() {
                 key={t.id}
                 type="button"
                 onClick={() => toggleInterest(t.id)}
-                className={`flex-shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-150 active:scale-[0.96] ${
+                className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-[0.96] ${
                   on
                     ? 'bg-swin-red text-white shadow-sm shadow-swin-red/30'
                     : 'bg-swin-charcoal/8 text-swin-charcoal/60 hover:bg-swin-charcoal/12 hover:text-swin-charcoal dark:bg-white/[0.08] dark:text-white/50 dark:hover:bg-white/[0.14] dark:hover:text-white'
                 }`}
               >
-                <span className="text-sm leading-none">{t.emoji}</span>
-                <span className="whitespace-nowrap">{t.label}</span>
+                {t.label}
               </button>
             );
           })}

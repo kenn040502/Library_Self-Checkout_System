@@ -15,6 +15,13 @@ const FALLBACK: ReelVideo[] = [
   { videoId: 'Mus_vwhTCq0', title: 'React in 100 Seconds',        channel: 'Fireship', tags: ['React', 'Web Dev']      },
 ];
 
+// Published within the last N days
+function publishedAfter(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const q         = searchParams.get('q') ?? 'programming tutorial';
@@ -26,44 +33,85 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // ── Step 1: search for fresh + trending shorts ────────────────────────────
     const params = new URLSearchParams({
-      part:            'snippet',
+      part:             'snippet',
       q,
-      type:            'video',
-      videoDuration:   'short',
-      videoEmbeddable: 'true',
-      safeSearch:      'strict',
-      maxResults:      '10',
-      order:           'relevance',
-      key:             apiKey,
+      type:             'video',
+      videoDuration:    'short',
+      videoEmbeddable:  'true',
+      safeSearch:       'strict',
+      maxResults:       '15',
+      order:            'viewCount',       // most-viewed = trending
+      publishedAfter:   publishedAfter(14), // last 14 days = fresh
+      relevanceLanguage:'en',
+      key:              apiKey,
     });
     if (pageToken) params.set('pageToken', pageToken);
 
-    const res = await fetch(
+    const searchRes = await fetch(
       `https://www.googleapis.com/youtube/v3/search?${params}`,
       { cache: 'no-store' },
     );
-    if (!res.ok) throw new Error(`YouTube API ${res.status}`);
+    if (!searchRes.ok) throw new Error(`YouTube search API ${searchRes.status}`);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any = await res.json();
-    if (data.error) throw new Error(data.error.message);
+    const searchData: any = await searchRes.json();
+    if (searchData.error) throw new Error(searchData.error.message);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const videos: ReelVideo[] = (data.items ?? [])
+    const items: any[] = (searchData.items ?? []).filter((i: any) => i.id?.videoId);
+    if (items.length === 0) {
+      return NextResponse.json({ videos: FALLBACK, nextPageToken: null });
+    }
+
+    const videoIds = items.map((i: any) => i.id.videoId as string).join(',');
+
+    // ── Step 2: fetch full snippet (includes tags) + statistics ───────────────
+    const detailParams = new URLSearchParams({
+      part: 'snippet,statistics',
+      id:   videoIds,
+      key:  apiKey,
+    });
+
+    const detailRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?${detailParams}`,
+      { cache: 'no-store' },
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const detailMap = new Map<string, any>();
+    if (detailRes.ok) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .filter((item: any) => item.id?.videoId)
+      const detailData: any = await detailRes.json();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((item: any) => ({
-        videoId: item.id.videoId as string,
-        title:   item.snippet.title as string,
-        channel: item.snippet.channelTitle as string,
-        tags:    [],
-      }));
+      for (const v of (detailData.items ?? [])) {
+        detailMap.set(v.id, v);
+      }
+    }
+
+    const videos: ReelVideo[] = items.map((item: any) => {
+      const vid    = item.id.videoId as string;
+      const detail = detailMap.get(vid);
+      const snippet = detail?.snippet ?? item.snippet;
+
+      // Pick up to 3 meaningful tags from the video's own tag list
+      const rawTags: string[] = snippet?.tags ?? [];
+      const tags = rawTags
+        .filter((t: string) => t.length <= 20)
+        .slice(0, 3);
+
+      return {
+        videoId: vid,
+        title:   snippet?.title   ?? item.snippet.title,
+        channel: snippet?.channelTitle ?? item.snippet.channelTitle,
+        tags,
+      };
+    });
 
     return NextResponse.json({
       videos,
-      nextPageToken: (data.nextPageToken as string) ?? null,
+      nextPageToken: (searchData.nextPageToken as string) ?? null,
     });
   } catch (err) {
     console.error('[youtube-reels]', err);

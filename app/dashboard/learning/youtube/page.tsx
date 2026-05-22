@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { SparklesIcon, ExclamationTriangleIcon, HashtagIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import {
   getLearningStatus,
   getLearningTrending,
@@ -14,29 +14,21 @@ import CommunityFeed from '@/app/ui/dashboard/learning/communityFeed';
 import NewsFeed from '@/app/ui/dashboard/learning/newsFeed';
 import { type NewsItem } from '@/app/ui/dashboard/learning/newsGrid';
 import YouTubeReelsFeed from '@/app/ui/dashboard/learning/youtubeReelsFeed';
+import YouTubeFilterBar from '@/app/ui/dashboard/learning/youtubeFilterBar';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const YT_QUICK_FILTERS = [
-  { label: 'Engineering',        query: 'engineering' },
-  { label: 'Computer Science',   query: 'computer science' },
-  { label: 'Cyber Security',     query: 'cyber security' },
-  { label: 'Data Science',       query: 'data science' },
-  { label: 'Business & Finance', query: 'business finance' },
-  { label: 'Design',             query: 'design' },
-];
-
 const DEVTO_TAGS = [
-  { label: 'All',            value: '',                emoji: '✨' },
-  { label: 'Programming',    value: 'programming',     emoji: '💻' },
-  { label: 'Computer Sci.',  value: 'computerscience', emoji: '🖥️' },
-  { label: 'Data Science',   value: 'datascience',     emoji: '📊' },
-  { label: 'Cyber Security', value: 'security',        emoji: '🔒' },
-  { label: 'Cloud',          value: 'cloud',           emoji: '☁️' },
-  { label: 'Engineering',    value: 'engineering',     emoji: '⚙️' },
-  { label: 'AI / ML',        value: 'machinelearning', emoji: '🤖' },
-  { label: 'Design',         value: 'ux',              emoji: '🎨' },
-  { label: 'Career',         value: 'career',          emoji: '📈' },
+  { label: 'All',            value: ''               },
+  { label: 'Programming',    value: 'programming'    },
+  { label: 'Computer Sci.',  value: 'computerscience'},
+  { label: 'Data Science',   value: 'datascience'    },
+  { label: 'Cyber Security', value: 'security'       },
+  { label: 'Cloud',          value: 'cloud'          },
+  { label: 'Engineering',    value: 'engineering'    },
+  { label: 'AI / ML',        value: 'machinelearning'},
+  { label: 'Design',         value: 'ux'             },
+  { label: 'Career',         value: 'career'         },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,7 +149,6 @@ export default async function LearningHubPage({
 
   // Dev.to params
   const activeTag = typeof params?.tag === 'string' ? params.tag : '';
-  const tagMeta   = DEVTO_TAGS.find((t) => t.value === activeTag) ?? DEVTO_TAGS[0];
 
   // Fetch only what the active tab needs
   const learningStatus = isYouTube ? await getLearningStatus() : null;
@@ -201,8 +192,7 @@ export default async function LearningHubPage({
                     : 'text-swin-charcoal/60 hover:text-swin-charcoal dark:text-white/50 dark:hover:text-white'
                 }`}
               >
-                <span className="sm:hidden text-xs">{tab.emoji}</span>
-                <span className="hidden sm:inline text-[11px]">{tab.emoji} {tab.label}</span>
+                <span className="text-[11px]">{tab.label}</span>
               </Link>
             );
           })}
@@ -231,17 +221,7 @@ export default async function LearningHubPage({
 
             <YouTubeSearchForm defaults={{ query: trimmedQuery, difficulty }} />
 
-            <section className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.3em] text-swin-charcoal/50 dark:text-white/60">Quick topics</p>
-              <div className="flex flex-wrap gap-2">
-                {YT_QUICK_FILTERS.map((f) => (
-                  <Link key={f.label} href={buildYtHref(f.query, difficulty)}
-                    className="rounded-full border border-swin-charcoal/10 px-4 py-2 text-sm font-medium text-swin-charcoal transition hover:border-swin-red hover:text-swin-red dark:border-white/20 dark:text-white">
-                    {f.label}
-                  </Link>
-                ))}
-              </div>
-            </section>
+            <YouTubeFilterBar activeQuery={trimmedQuery} difficulty={difficulty} />
 
             {trimmedQuery ? (
               <section className="space-y-4">
@@ -296,31 +276,25 @@ export default async function LearningHubPage({
         ══════════════════════════════════════════════ */}
         {isCommunity && (
           <>
-            <div className="flex flex-wrap items-center gap-2">
-              <HashtagIcon className="h-4 w-4 flex-shrink-0 text-swin-charcoal/40 dark:text-white/40" />
-              {DEVTO_TAGS.map((tag) => (
-                <Link key={tag.value}
-                  href={`${tabBase}?view=community&tag=${tag.value}`}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    activeTag === tag.value
-                      ? 'bg-swin-red text-white shadow-sm shadow-swin-red/30'
-                      : 'bg-swin-charcoal/5 text-swin-charcoal hover:bg-swin-red/10 hover:text-swin-red dark:bg-white/5 dark:text-white dark:hover:text-swin-red'
-                  }`}
-                >
-                  {tag.emoji} {tag.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-swin-charcoal/10 dark:bg-white/10" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-swin-charcoal/40 dark:text-white/40">
-                {tagMeta.emoji} {devToArticles.length} trending posts
-              </span>
-              <div className="h-px flex-1 bg-swin-charcoal/10 dark:bg-white/10" />
-            </div>
-
-            <CommunityFeed articles={devToArticles} />
+            <CommunityFeed
+              articles={devToArticles}
+              tagFilter={
+                <div key="community-tags" className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+                  {DEVTO_TAGS.map((tag) => (
+                    <Link key={tag.value || 'all'}
+                      href={`${tabBase}?view=community&tag=${tag.value}`}
+                      className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-[0.96] ${
+                        activeTag === tag.value
+                          ? 'bg-swin-red text-white shadow-sm shadow-swin-red/30'
+                          : 'bg-swin-charcoal/[0.08] text-swin-charcoal/60 hover:bg-swin-charcoal/[0.12] hover:text-swin-charcoal dark:bg-white/[0.08] dark:text-white/50 dark:hover:bg-white/[0.14] dark:hover:text-white'
+                      }`}
+                    >
+                      {tag.label}
+                    </Link>
+                  ))}
+                </div>
+              }
+            />
 
             <p className="text-center text-[11px] text-swin-charcoal/30 dark:text-white/25">
               Powered by{' '}

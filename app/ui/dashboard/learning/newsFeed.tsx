@@ -53,7 +53,7 @@ export default function NewsFeed({ stories }: { stories: NewsItem[] }) {
       </div>
 
       {/* Source filter pills */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
         {SOURCES.map((src) => {
           const isActive = source === src;
           const colorClass = src === 'All' ? '' : SOURCE_COLORS[src] ?? 'bg-swin-red';
@@ -62,12 +62,10 @@ export default function NewsFeed({ stories }: { stories: NewsItem[] }) {
               key={src}
               type="button"
               onClick={() => setSource(src)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-[0.96] ${
                 isActive
-                  ? src === 'All'
-                    ? 'bg-swin-charcoal text-white dark:bg-white dark:text-swin-charcoal'
-                    : `${colorClass} text-white shadow-sm`
-                  : 'bg-swin-charcoal/5 text-swin-charcoal hover:bg-swin-charcoal/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10'
+                  ? `${src === 'All' ? 'bg-swin-red' : colorClass} text-white shadow-sm shadow-swin-red/30`
+                  : 'bg-swin-charcoal/[0.08] text-swin-charcoal/60 hover:bg-swin-charcoal/[0.12] hover:text-swin-charcoal dark:bg-white/[0.08] dark:text-white/50 dark:hover:bg-white/[0.14] dark:hover:text-white'
               }`}
             >
               {src}
