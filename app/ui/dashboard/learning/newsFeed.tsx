@@ -34,11 +34,12 @@ export default function NewsFeed({ stories }: { stories: NewsItem[] }) {
       <div className="relative group">
         <MagnifyingGlassIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-swin-charcoal/40 transition-colors group-focus-within:text-swin-red dark:text-white/30" />
         <input
-          type="search"
+          type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search news headlines…"
           className="w-full rounded-2xl border border-swin-charcoal/10 bg-swin-charcoal/5 py-3.5 pl-12 pr-10 text-sm text-swin-charcoal placeholder:text-swin-charcoal/40 transition-all focus:border-swin-red focus:bg-white focus:outline-none focus:ring-4 focus:ring-swin-red/5 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 dark:focus:border-swin-red dark:focus:bg-slate-900"
+          suppressHydrationWarning
         />
         {query && (
           <button
