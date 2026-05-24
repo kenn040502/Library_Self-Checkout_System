@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isSensitiveContent } from '@/app/lib/recommendations/guardrails';
-import { classifyAndExtract, suggestLinkedInCourses, facultyToCategory } from '@/app/lib/recommendations/ai';
+import { classifyAndExtract, suggestYouTubeCourses, facultyToCategory } from '@/app/lib/recommendations/ai';
 import { retrieveCandidateBooks } from '@/app/lib/recommendations/retrieve';
 import {
   buildAssociationRules,
@@ -135,7 +135,7 @@ const findBooks = async (
   searchTerms: string[],
   userContext: UserContext,
   requestedLimit: number,
-): Promise<{ items: RecommendationItem[]; linkedIn: Awaited<ReturnType<typeof suggestLinkedInCourses>> }> => {
+): Promise<{ items: RecommendationItem[]; youtube: Awaited<ReturnType<typeof suggestYouTubeCourses>> }> => {
   const searchInput = searchTerms.join(', ');
   const preferredCategory = facultyToCategory(userContext.faculty);
   const intakeYear = userContext.intakeYear;
@@ -151,9 +151,9 @@ const findBooks = async (
 
   const finalList = diversify(ranked, requestedLimit);
   const items = finalList.map(toRecommendationItem);
-  const linkedIn = await suggestLinkedInCourses(searchTerms);
+  const youtube = await suggestYouTubeCourses(searchTerms);
 
-  return { items, linkedIn };
+  return { items, youtube };
 };
 
 export async function POST(request: Request) {
@@ -210,7 +210,7 @@ export async function POST(request: Request) {
   }
 
   // Step 4: Fetch user context
-  let userContext: UserContext = { historyTags: [], savedInterests: [], faculty: null, department: null, intakeYear: null };
+  let userContext: UserContext = { historyTags: [], recentBorrowedBooks: [], savedInterests: [], faculty: null, department: null, intakeYear: null };
   try {
     const { user } = await getDashboardSession();
     if (user) userContext = await fetchUserContext(user.id);
@@ -222,7 +222,7 @@ export async function POST(request: Request) {
   const requestedLimit = clamp(Number(body.limit ?? 3), 1, 6);
 
   try {
-    const aiResult = await classifyAndExtract(message, userContext, provider);
+    const aiResult = await classifyAndExtract(message, userContext);
 
     switch (aiResult.intent) {
       case 'greeting': {
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
 
       case 'answer': {
         // Answer the question and try to find a few related books
-        const { items, linkedIn } = await findBooks(
+        const { items, youtube } = await findBooks(
           aiResult.searchTerms.length ? aiResult.searchTerms : [message],
           userContext,
           3,
@@ -262,7 +262,7 @@ export async function POST(request: Request) {
           kind: items.length ? 'recommendations' : 'chat',
           reply: aiResult.reply,
           recommendations: items,
-          linkedInSuggestions: linkedIn,
+          youtubeSuggestions: youtube,
           interests: aiResult.searchTerms,
           summary: aiResult.reply,
           followUpQuestion: aiResult.followUpQuestion,
@@ -283,7 +283,7 @@ export async function POST(request: Request) {
           });
         }
 
-        const { items, linkedIn } = await findBooks(aiResult.searchTerms, userContext, requestedLimit);
+        const { items, youtube } = await findBooks(aiResult.searchTerms, userContext, requestedLimit);
 
         if (!items.length) {
           return NextResponse.json({
@@ -291,7 +291,7 @@ export async function POST(request: Request) {
             kind: 'no_matches',
             reply: `I could not find matching books in the catalog for "${aiResult.searchTerms.slice(0, 3).join(', ')}". Try broader topic keywords.`,
             recommendations: [],
-            linkedInSuggestions: linkedIn,
+            youtubeSuggestions: youtube,
             interests: aiResult.searchTerms,
             summary: null,
             followUpQuestion: aiResult.followUpQuestion,
@@ -307,7 +307,7 @@ export async function POST(request: Request) {
           kind: 'recommendations',
           reply: introReply,
           recommendations: items,
-          linkedInSuggestions: linkedIn,
+          youtubeSuggestions: youtube,
           interests: aiResult.searchTerms,
           summary: introReply,
           followUpQuestion: aiResult.followUpQuestion,

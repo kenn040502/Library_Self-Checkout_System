@@ -141,38 +141,50 @@ export default async function ProfilePage() {
   const preferredName = profile.display_name ?? user.name ?? null;
 
   return (
-    <main className="min-h-screen bg-canvas py-10 text-ink transition-colors sm:py-14 dark:bg-dark-canvas dark:text-on-dark">
+    <main className="min-h-screen bg-canvas py-5 text-ink transition-colors sm:py-10 dark:bg-dark-canvas dark:text-on-dark">
       <title>My Profile</title>
 
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Page header */}
         <BlurFade delay={0.05} yOffset={12}>
-          <header className="mb-8 border-b border-hairline pb-6 dark:border-dark-hairline">
-            <p className="mb-1.5 font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">
+          <header className="mb-5 border-b border-hairline pb-4 dark:border-dark-hairline">
+            <p className="mb-1 font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">
               Account
             </p>
-            <h1 className="font-display text-display-lg text-ink tracking-tight dark:text-on-dark">
+            <h1 className="font-display text-display-md tracking-tight text-ink dark:text-on-dark sm:text-display-lg">
               My Profile
             </h1>
-            <p className="mt-2 font-sans text-body-md text-body dark:text-on-dark/80">
-              Keep your identity and contact details up to date so other patrons and staff can reach you.
+            <p className="mt-1.5 font-sans text-body-sm text-body dark:text-on-dark/80">
+              Keep your identity and contact details up to date.
             </p>
           </header>
         </BlurFade>
 
-        <div className="grid gap-7 lg:grid-cols-[320px_1fr]">
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-[300px_1fr]">
           {/* ── LEFT COLUMN — identity card + summary ───────────────────── */}
-          <aside className="space-y-5">
+          <aside className="space-y-3">
             <BlurFade delay={0.1} yOffset={12}>
-              <section className="rounded-card border border-hairline bg-surface-card p-6 dark:border-dark-hairline dark:bg-dark-surface-card">
+              <section className="rounded-card border border-hairline bg-surface-card p-2.5 sm:p-3 dark:border-dark-hairline dark:bg-dark-surface-card">
                 <div className="flex flex-col items-center text-center">
-                  <div className="relative mb-4">
+                  <div className="relative mb-2">
                     <ProfileAvatarForm
                       avatarUrl={profile.avatar_url ?? null}
                       displayName={preferredName}
                     />
                   </div>
-                  <p className="font-display text-display-sm text-ink tracking-tight dark:text-on-dark">
+                  <p
+                    className="
+                      max-w-full
+                      truncate
+                      font-display
+                      text-[20px]
+                      tracking-tight
+                      text-ink
+                      dark:text-on-dark
+                      sm:text-[24px]
+                    "
+                    title={preferredName ?? user.email ?? 'My Profile'}
+                  >
                     {preferredName ?? user.email ?? 'My Profile'}
                   </p>
                   {profile.username && (
@@ -180,10 +192,13 @@ export default async function ProfilePage() {
                       @{profile.username}
                     </p>
                   )}
-                  <p className="mt-1 font-sans text-body-sm text-muted dark:text-on-dark-soft">
+                  <p
+                    className="mt-1 w-full truncate font-sans text-[10px] text-muted dark:text-on-dark-soft"
+                    title={user.email ?? 'Email unavailable'}
+                  >
                     {user.email ?? 'Email unavailable'}
                   </p>
-                  <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                  <div className="mt-1.5 flex flex-wrap justify-center gap-1">
                     <RoleBadge role={user.role ?? 'user'} />
                     <span className="inline-flex items-center rounded-pill border border-hairline bg-surface-cream-strong px-2 py-0.5 font-sans text-caption-uppercase text-muted dark:border-dark-hairline dark:bg-dark-surface-strong dark:text-on-dark-soft">
                       {visibilityLabel.toUpperCase()}
@@ -194,11 +209,11 @@ export default async function ProfilePage() {
             </BlurFade>
 
             <BlurFade delay={0.18} yOffset={12}>
-              <section className="rounded-card border border-hairline bg-surface-card p-5 dark:border-dark-hairline dark:bg-dark-surface-card">
-                <p className="mb-3 font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">
+              <section className="rounded-card border border-hairline bg-surface-card p-3 sm:p-4 dark:border-dark-hairline dark:bg-dark-surface-card">
+                <p className="mb-2.5 font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">
                   Activity summary
                 </p>
-                <dl className="space-y-3 font-sans text-body-sm">
+                <dl className="space-y-2 font-sans text-body-sm">
                   <div className="flex items-baseline justify-between">
                     <dt className="text-muted dark:text-on-dark-soft">Faculty</dt>
                     <dd className="font-medium text-ink dark:text-on-dark">
@@ -231,10 +246,10 @@ export default async function ProfilePage() {
           </aside>
 
           {/* ── RIGHT COLUMN — identity + contact + links ───────────────── */}
-          <div className="space-y-5">
+          <div className="space-y-3">
             <BlurFade delay={0.22} yOffset={12}>
-              <section className="rounded-card border border-hairline bg-surface-card p-6 dark:border-dark-hairline dark:bg-dark-surface-card">
-                <h2 className="mb-4 font-display text-display-sm text-ink tracking-tight dark:text-on-dark">
+              <section className="rounded-card border border-hairline bg-surface-card p-3 sm:p-4 dark:border-dark-hairline dark:bg-dark-surface-card">
+                <h2 className="mb-2 font-display text-title-lg tracking-tight text-ink dark:text-on-dark sm:text-display-sm">
                   Identity
                 </h2>
                 <div className="divide-y divide-hairline dark:divide-dark-hairline">
@@ -275,8 +290,8 @@ export default async function ProfilePage() {
             </BlurFade>
 
             <BlurFade delay={0.28} yOffset={12}>
-              <section className="rounded-card border border-hairline bg-surface-card p-6 dark:border-dark-hairline dark:bg-dark-surface-card">
-                <h2 className="mb-4 font-display text-display-sm text-ink tracking-tight dark:text-on-dark">
+              <section className="rounded-card border border-hairline bg-surface-card p-4 sm:p-6 dark:border-dark-hairline dark:bg-dark-surface-card">
+                <h2 className="mb-3 font-display text-title-lg tracking-tight text-ink dark:text-on-dark sm:text-display-sm">
                   Contact & details
                 </h2>
                 <ProfileEditForm
@@ -292,7 +307,7 @@ export default async function ProfilePage() {
 
             <BlurFade delay={0.34} yOffset={12}>
               <section className="rounded-card border border-hairline bg-surface-card dark:border-dark-hairline dark:bg-dark-surface-card">
-                <h2 className="px-6 pt-5 font-display text-display-sm text-ink tracking-tight dark:text-on-dark">
+                <h2 className="px-4 pt-4 font-display text-title-lg tracking-tight text-ink dark:text-on-dark sm:px-6 sm:pt-5 sm:text-display-sm">
                   Links
                 </h2>
                 {links.length > 0 ? (
@@ -303,7 +318,7 @@ export default async function ProfilePage() {
                           href={link.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center justify-between px-6 py-4 transition hover:bg-surface-cream-strong dark:hover:bg-dark-surface-strong"
+                          className="flex items-center justify-between px-4 py-3 transition hover:bg-surface-cream-strong dark:hover:bg-dark-surface-strong sm:px-6"
                         >
                           <span className="font-sans text-body-sm font-semibold text-primary dark:text-dark-primary">
                             {link.label}
@@ -314,7 +329,7 @@ export default async function ProfilePage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="px-6 pb-6 pt-3 font-sans text-body-sm text-muted dark:text-on-dark-soft">
+                  <p className="px-4 pb-4 pt-2 font-sans text-body-sm text-muted dark:text-on-dark-soft sm:px-6 sm:pb-5">
                     No links added yet.
                   </p>
                 )}

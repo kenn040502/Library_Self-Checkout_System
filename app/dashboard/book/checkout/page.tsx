@@ -1,6 +1,5 @@
 import CheckOutForm from '@/app/ui/dashboard/checkOutForm';
 import ActiveLoansTable from '@/app/ui/dashboard/activeLoansTable';
-import SearchForm from '@/app/ui/dashboard/searchForm';
 import {
   fetchActiveLoans,
   fetchAvailableBooks,
@@ -11,7 +10,6 @@ import {
 import { getDashboardSession } from '@/app/lib/auth/session';
 import AdminShell from '@/app/ui/dashboard/adminShell';
 import { STUDENT_LOAN_LIMIT } from '@/app/dashboard/loanPolicy';
-import { QrCodeIcon } from '@heroicons/react/24/outline';
 
 const defaultLoanDurationDays = 14;
 
@@ -70,35 +68,9 @@ export default async function BorrowBooksPage({
         description={canProcessLoans
           ? 'Lend titles by scanning barcodes or selecting items from the catalogue.'
           : 'Borrow a title by scanning your copy or searching the catalogue, then confirm your details.'}
+        showHeader={false}
       >
         <div className="space-y-6">
-          {/* Scan hero — solid primary per spec §6.4 (drop gradient + boxShadow) */}
-          <div className="relative overflow-hidden rounded-card bg-primary p-6 text-on-primary">
-            <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-on-primary/10" />
-            <div className="relative flex items-start gap-5">
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[14px] border border-on-primary/25 bg-on-primary/15">
-                <QrCodeIcon className="h-7 w-7" strokeWidth={1.8} />
-              </div>
-              <div className="flex-1">
-                <p className="font-sans text-caption-uppercase font-bold opacity-80">
-                  Self-Service Desk · Scan to Process
-                </p>
-                <h2 className="mt-1 font-display text-display-md font-semibold leading-tight tracking-tight">
-                  Scan a barcode or pick a title below
-                </h2>
-                <p className="mt-1 font-sans text-body-sm opacity-85">
-                  Point the camera at the book barcode, or find it in the catalogue and confirm your loan.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <SearchForm
-            defaultValue={searchTerm}
-            aria-label="Search available books"
-            extraParams={{ mode: 'out' }}
-          />
-
           <CheckOutForm
             books={books}
             defaultDueDate={defaultDueDate}

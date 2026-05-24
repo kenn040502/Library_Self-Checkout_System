@@ -385,7 +385,8 @@ export async function checkoutBookAction(
     fetchHoldsForBook(bookId),
   ]);
 
-  if (activeLoanCount >= STUDENT_LOAN_LIMIT) {
+  const isStudentPatron = !borrower.role || borrower.role === 'user';
+  if (isStudentPatron && activeLoanCount >= STUDENT_LOAN_LIMIT) {
     return failure(
       `Loan limit reached (${activeLoanCount}/${STUDENT_LOAN_LIMIT}). Return a book before borrowing another.`,
     );

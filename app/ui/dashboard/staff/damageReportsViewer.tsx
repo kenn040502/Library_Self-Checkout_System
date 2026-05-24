@@ -177,14 +177,14 @@ export default function DamageReportsViewer({ reports, signedUrls, initialFilter
       ) : (
         <div className="overflow-hidden rounded-card border border-hairline bg-surface-card dark:border-dark-hairline dark:bg-dark-surface-card">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left text-[13px]">
               <thead className="bg-surface-cream-strong dark:bg-dark-surface-strong">
                 <tr>
                   {['Date', 'Severity', 'Book', 'Copy', 'Borrower', 'Reported by', 'Photos', ''].map(
                     (h) => (
                       <th
                         key={h || 'actions'}
-                        className="px-4 py-3 font-sans text-caption-uppercase text-ink dark:text-on-dark"
+                        className="px-3 py-2 font-sans text-[10px] font-semibold uppercase tracking-[1.4px] text-ink dark:text-on-dark"
                       >
                         {h}
                       </th>
@@ -198,46 +198,46 @@ export default function DamageReportsViewer({ reports, signedUrls, initialFilter
                     key={r.id}
                     className="border-t border-hairline-soft transition hover:bg-surface-cream-strong/50 dark:border-dark-hairline dark:hover:bg-dark-surface-strong/50"
                   >
-                    <td className="px-4 py-3 align-top font-sans text-body-sm text-ink dark:text-on-dark">
+                    <td className="px-3 py-2 align-top font-sans text-[13px] text-ink dark:text-on-dark">
                       {formatDate(r.createdAt)}
                     </td>
-                    <td className="px-4 py-3 align-top">{severityChip(r.severity)}</td>
-                    <td className="px-4 py-3 align-top">
-                      <p className="font-sans text-title-md text-ink dark:text-on-dark">
+                    <td className="px-3 py-2 align-top">{severityChip(r.severity)}</td>
+                    <td className="px-3 py-2 align-top">
+                      <p className="font-sans text-[14px] font-semibold text-ink dark:text-on-dark">
                         {r.copy?.book?.title ?? '—'}
                       </p>
                       {r.copy?.book?.author && (
-                        <p className="font-display text-body-sm italic text-muted dark:text-on-dark-soft">
+                        <p className="font-display text-[12px] italic text-muted dark:text-on-dark-soft">
                           by {r.copy.book.author}
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-top font-mono text-code text-muted dark:text-on-dark-soft">
+                    <td className="px-3 py-2 align-top font-mono text-[12px] text-muted dark:text-on-dark-soft">
                       {r.copy?.barcode ?? '—'}
                     </td>
-                    <td className="px-4 py-3 align-top font-sans text-body-sm text-ink dark:text-on-dark">
+                    <td className="px-3 py-2 align-top font-sans text-[13px] text-ink dark:text-on-dark">
                       {r.borrower?.displayName ?? r.borrower?.email ?? '—'}
                     </td>
-                    <td className="px-4 py-3 align-top font-sans text-body-sm text-muted dark:text-on-dark-soft">
+                    <td className="px-3 py-2 align-top font-sans text-[13px] text-muted dark:text-on-dark-soft">
                       {r.reportedBy?.displayName ?? r.reportedBy?.email ?? '—'}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-3 py-2 align-top">
                       {r.photoPaths.length > 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded-pill bg-surface-cream-strong px-2 py-0.5 font-mono text-code text-muted dark:bg-dark-surface-strong dark:text-on-dark-soft">
+                        <span className="inline-flex items-center gap-1 rounded-pill bg-surface-cream-strong px-2 py-0.5 font-mono text-[11px] text-muted dark:bg-dark-surface-strong dark:text-on-dark-soft">
                           <PhotoIcon className="h-3 w-3" />
                           {r.photoPaths.length}
                         </span>
                       ) : (
-                        <span className="font-mono text-code text-muted-soft dark:text-on-dark-soft">
+                        <span className="font-mono text-[12px] text-muted-soft dark:text-on-dark-soft">
                           —
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-3 py-2 align-top">
                       <button
                         type="button"
                         onClick={() => setOpenReportId(r.id)}
-                        className="inline-flex h-9 items-center rounded-btn border border-hairline bg-surface-card px-3 font-sans text-caption-uppercase text-ink transition hover:bg-surface-cream-strong hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong dark:focus-visible:ring-offset-dark-canvas"
+                        className="inline-flex h-8 items-center rounded-btn border border-hairline bg-surface-card px-2.5 font-sans text-[10px] font-semibold uppercase tracking-[1.4px] text-ink transition hover:bg-surface-cream-strong hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong dark:focus-visible:ring-offset-dark-canvas"
                       >
                         View
                       </button>

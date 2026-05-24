@@ -1,12 +1,12 @@
 import '@/app/ui/global.css';
-import { Newsreader, Inter, JetBrains_Mono } from 'next/font/google';
+import { Libre_Baskerville, Inter, JetBrains_Mono } from 'next/font/google';
 import { Providers } from './providers';
 
-const newsreader = Newsreader({
+const libreBaskerville = Libre_Baskerville({
   subsets: ['latin'],
-  weight: ['400', '500'],
+  weight: ['400', '700'],
   display: 'swap',
-  variable: '--font-newsreader',
+  variable: '--font-libre-baskerville',
 });
 
 const inter = Inter({
@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${newsreader.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${libreBaskerville.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body
         suppressHydrationWarning

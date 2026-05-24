@@ -6,28 +6,31 @@ import {
   fetchNotificationsForRole,
   fetchNotificationsForUser,
   markNotificationRead,
+  markNotificationsReadByIds,
+  markNotificationUnread,
   markAllNotificationsRead,
   markAllUserNotificationsRead,
+  toggleNotificationFlag,
 } from '@/app/lib/supabase/notifications';
+import type { NotificationFilter } from '@/app/lib/supabase/notifications';
 import type { DashboardRole } from '@/app/lib/auth/types';
+
+const VALID_FILTERS: NotificationFilter[] = ['all', 'read', 'unread', 'flagged'];
 
 // Resolve the current session for any role
 async function getSessionUser(): Promise<{ id: string; role: DashboardRole } | null> {
-  // Dev bypass
   if (isDevAuthBypassed) {
     const role = getDevBypassRole();
     return { id: getDevBypassUserId(), role };
   }
 
-  // Try staff/admin path first; fall through to session for regular users on any error
   try {
     const user = await requireStaff();
     return { id: user.id, role: user.role };
   } catch {
-    // ForbiddenError (user role), UnauthorizedError, or network errors — all fall through
+    // ForbiddenError (user role), UnauthorizedError — fall through
   }
 
-  // Regular user — fall back to the full session helper
   const { user } = await getDashboardSession();
   if (!user) return null;
   return { id: user.id, role: user.role };
@@ -38,8 +41,11 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
-  const filter = (searchParams.get('filter') ?? 'all') as 'all' | 'read' | 'unread';
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10), 100);
+  const rawFilter = searchParams.get('filter') ?? 'all';
+  const filter: NotificationFilter = VALID_FILTERS.includes(rawFilter as NotificationFilter)
+    ? (rawFilter as NotificationFilter)
+    : 'all';
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10), 200);
 
   const notifications =
     user.role === 'staff' || user.role === 'admin'
@@ -55,14 +61,26 @@ export async function PATCH(request: Request) {
 
   const body = await request.json();
 
-  if (body.markAll === true) {
+  if (Array.isArray(body.notificationIds)) {
+    // New, source-of-truth contract: client tells us which IDs are unread.
+    await markNotificationsReadByIds(user.id, body.notificationIds);
+  } else if (body.markAll === true) {
+    // Legacy fallback — kept for backward compat with stale clients.
     if (user.role === 'staff' || user.role === 'admin') {
       await markAllNotificationsRead(user.role, user.id);
     } else {
       await markAllUserNotificationsRead(user.id);
     }
   } else if (typeof body.notificationId === 'string') {
-    await markNotificationRead(body.notificationId, user.id);
+    const id = body.notificationId;
+
+    if (body.markUnread === true) {
+      await markNotificationUnread(id, user.id);
+    } else if (typeof body.flagged === 'boolean') {
+      await toggleNotificationFlag(id, user.id, body.flagged);
+    } else {
+      await markNotificationRead(id, user.id);
+    }
   } else {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }

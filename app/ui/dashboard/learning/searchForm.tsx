@@ -3,19 +3,16 @@
 import { useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
-import { Button } from '@/app/ui/button';
 
 type SearchDefaults = {
   query?: string;
   difficulty?: string;
 };
 
-export default function LinkedInLearningSearchForm({
+export default function YouTubeSearchForm({
   defaults,
-  providerLabel = 'LinkedIn Learning',
 }: {
   defaults: SearchDefaults;
-  providerLabel?: string;
 }) {
   const query = defaults.query ?? '';
   const difficulty = defaults.difficulty ?? 'ALL';
@@ -32,45 +29,44 @@ export default function LinkedInLearningSearchForm({
     e.preventDefault();
     const q = inputRef.current?.value.trim() ?? '';
     const diff = selectRef.current?.value ?? 'ALL';
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ view: 'youtube' });
     if (q) params.set('q', q);
     if (diff && diff !== 'ALL') params.set('difficulty', diff);
-    const qs = params.toString();
-    router.push(`/dashboard/learning/linkedin${qs ? `?${qs}` : ''}`);
+    router.push(`/dashboard/learning/youtube?${params.toString()}`);
   };
 
   const handleReset = () => {
     if (inputRef.current) inputRef.current.value = '';
     if (selectRef.current) selectRef.current.value = 'ALL';
-    router.push('/dashboard/learning/linkedin');
+    router.push('/dashboard/learning/youtube?view=youtube');
   };
 
   return (
     <form
-      className="grid gap-4 rounded-card border border-hairline bg-surface-card p-6 dark:border-dark-hairline dark:bg-dark-surface-card"
+      className="grid gap-4 rounded-3xl border border-swin-charcoal/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/60"
       onSubmit={handleSubmit}
     >
-      <label className="font-sans text-body-sm font-medium text-ink dark:text-on-dark">
-        Search {providerLabel}
-        <span className="mt-2 flex items-center gap-3 rounded-btn border border-hairline bg-canvas px-4 py-3 dark:border-dark-hairline dark:bg-dark-surface-soft focus-within:ring-2 focus-within:ring-primary/40 focus-within:ring-offset-2 focus-within:ring-offset-canvas dark:focus-within:ring-offset-dark-canvas">
-          <MagnifyingGlassIcon className="h-5 w-5 text-muted-soft dark:text-on-dark-soft" />
+      <label className="text-sm font-medium text-swin-charcoal dark:text-white">
+        Search YouTube tutorials
+        <div className="group mt-2 flex items-center gap-3 rounded-2xl border border-swin-charcoal/10 bg-swin-charcoal/5 px-4 py-3.5 transition-all focus-within:border-swin-red focus-within:bg-white focus-within:ring-4 focus-within:ring-swin-red/5 dark:border-white/10 dark:bg-white/5 dark:focus-within:bg-slate-900">
+          <MagnifyingGlassIcon className="h-5 w-5 text-swin-charcoal/40 transition-colors group-focus-within:text-swin-red dark:text-white/30" />
           <input
             ref={inputRef}
             type="search"
             defaultValue={query}
-            placeholder='Try "algorithms" or "calculus"'
-            className="w-full border-none bg-transparent font-sans text-body-md text-ink placeholder:text-muted-soft focus:outline-none dark:text-on-dark dark:placeholder:text-on-dark-soft"
+            placeholder='Try "Python" or "project management"'
+            className="w-full border-none bg-transparent text-sm text-swin-charcoal placeholder:text-swin-charcoal/40 focus:outline-none focus:ring-0 dark:text-white dark:placeholder:text-white/30"
           />
-        </span>
+        </div>
       </label>
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,220px)_auto] md:items-end">
-        <label className="font-sans text-body-sm font-medium text-ink dark:text-on-dark">
+        <label className="text-sm font-medium text-swin-charcoal dark:text-white">
           Difficulty
           <select
             ref={selectRef}
             defaultValue={difficulty}
-            className="mt-2 h-10 w-full rounded-btn border border-hairline bg-canvas px-3.5 font-sans text-body-md text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:focus-visible:ring-offset-dark-canvas"
+            className="mt-2 w-full rounded-2xl border border-swin-charcoal/10 bg-white px-4 py-3 text-sm text-swin-charcoal shadow-sm focus:border-swin-red focus:outline-none dark:border-white/10 dark:bg-slate-900 dark:text-white"
           >
             <option value="ALL">All levels</option>
             <option value="BEGINNER">Beginner</option>
@@ -79,13 +75,16 @@ export default function LinkedInLearningSearchForm({
           </select>
         </label>
         <div className="flex gap-3">
-          <Button type="submit" className="flex-1 justify-center">
+          <button
+            type="submit"
+            className="flex-1 rounded-2xl bg-swin-red px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-swin-red/90"
+          >
             Search
-          </Button>
+          </button>
           <button
             type="button"
             onClick={handleReset}
-            className="flex h-10 items-center rounded-btn border border-hairline bg-canvas px-5 font-sans text-button text-ink transition hover:border-primary/20 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:hover:border-dark-primary/30 dark:hover:text-dark-primary dark:focus-visible:ring-offset-dark-canvas"
+            className="rounded-2xl border border-swin-charcoal/15 px-4 py-3 text-sm font-semibold text-swin-charcoal transition hover:border-swin-red hover:text-swin-red dark:border-white/20 dark:text-white dark:hover:text-swin-red"
           >
             Reset
           </button>

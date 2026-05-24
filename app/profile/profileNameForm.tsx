@@ -16,7 +16,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" aria-disabled={pending} disabled={pending}>
+    <Button type="submit" aria-disabled={pending} disabled={pending} suppressHydrationWarning>
       {pending ? (
         <span className="flex items-center gap-2">
           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
@@ -58,6 +58,7 @@ export default function ProfileNameForm({
           placeholder="Display Name"
           className="block h-10 w-full rounded-btn border border-hairline bg-canvas pl-10 pr-3.5 font-sans text-body-md text-ink placeholder:text-muted-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
           maxLength={120}
+          suppressHydrationWarning
         />
         {state.status !== 'idle' && (
           <p

@@ -185,6 +185,31 @@ export default function BookCatalogTable({ books }: { books: CatalogBook[] }) {
   const [autoCategorizing, setAutoCategorizing] = React.useState(false);
   const [autoCategoryMessage, setAutoCategoryMessage] = React.useState<string | null>(null);
   const [autoCategoryError, setAutoCategoryError] = React.useState<string | null>(null);
+  const [embedding, setEmbedding] = React.useState(false);
+  const [embedMessage, setEmbedMessage] = React.useState<string | null>(null);
+  const [embedError, setEmbedError] = React.useState<string | null>(null);
+
+  async function onEmbedAll(reembed = false) {
+    setEmbedMessage(null);
+    setEmbedError(null);
+    setEmbedding(true);
+    try {
+      const res = await fetch('/api/book/embed-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reembed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Embedding failed');
+      const n = Number(data?.embedded ?? 0);
+      const f = Number(data?.failed ?? 0);
+      setEmbedMessage(`Embedded ${n} book${n === 1 ? '' : 's'}${f ? ` (${f} failed)` : ''}.`);
+    } catch (err) {
+      setEmbedError(err instanceof Error ? err.message : 'Embedding failed');
+    } finally {
+      setEmbedding(false);
+    }
+  }
 
   function onManage(b: CatalogBook) {
     setActive(b);
@@ -368,6 +393,25 @@ export default function BookCatalogTable({ books }: { books: CatalogBook[] }) {
         </button>
         {autoCategoryMessage && <span className="font-sans text-body-sm text-success">{autoCategoryMessage}</span>}
         {autoCategoryError && <span className="font-sans text-body-sm text-error">{autoCategoryError}</span>}
+
+        <button
+          type="button"
+          onClick={() => onEmbedAll(false)}
+          disabled={embedding}
+          className="inline-flex items-center gap-2 rounded-btn border border-hairline bg-surface-card px-3 py-1.5 font-sans text-button text-ink hover:bg-surface-cream-strong disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong"
+        >
+          {embedding ? 'Embedding…' : 'Embed unembedded books'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onEmbedAll(true)}
+          disabled={embedding}
+          className="inline-flex items-center gap-2 rounded-btn border border-hairline bg-surface-card px-3 py-1.5 font-sans text-button text-ink hover:bg-surface-cream-strong disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong"
+        >
+          {embedding ? 'Embedding…' : 'Re-embed all'}
+        </button>
+        {embedMessage && <span className="font-sans text-body-sm text-success">{embedMessage}</span>}
+        {embedError && <span className="font-sans text-body-sm text-error">{embedError}</span>}
       </div>
 
       {/* Category filter chips */}
@@ -386,16 +430,16 @@ export default function BookCatalogTable({ books }: { books: CatalogBook[] }) {
         </button>
         {CATEGORIES.map((cat) => {
           const colors: Record<BookCategory, string> = {
-            'Computer Science': 'bg-blue-600 text-white',
-            'Business': 'bg-emerald-600 text-white',
-            'Art & Design': 'bg-purple-600 text-white',
-            'Engineering': 'bg-orange-600 text-white',
+            'Computer Science': 'bg-primary text-on-primary',
+            'Business':         'bg-success text-on-primary',
+            'Art & Design':     'bg-accent-teal text-on-primary',
+            'Engineering':      'bg-accent-amber text-on-primary',
           };
           const borders: Record<BookCategory, string> = {
-            'Computer Science': 'border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950',
-            'Business': 'border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-950',
-            'Art & Design': 'border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-950',
-            'Engineering': 'border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-950',
+            'Computer Science': 'border-primary/30 text-primary hover:bg-primary/10 dark:border-primary/40 dark:text-dark-primary dark:hover:bg-primary/10',
+            'Business':         'border-success/30 text-success hover:bg-success/10 dark:border-success/40 dark:text-success dark:hover:bg-success/10',
+            'Art & Design':     'border-accent-teal/30 text-accent-teal hover:bg-accent-teal/10 dark:border-accent-teal/40 dark:text-accent-teal dark:hover:bg-accent-teal/10',
+            'Engineering':      'border-accent-amber/30 text-accent-amber hover:bg-accent-amber/10 dark:border-accent-amber/40 dark:text-accent-amber dark:hover:bg-accent-amber/10',
           };
           return (
             <button

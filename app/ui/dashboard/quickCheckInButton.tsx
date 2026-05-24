@@ -16,6 +16,7 @@ function SubmitButton({ onClick }: { onClick: () => void }) {
       type="button"
       disabled={pending}
       onClick={onClick}
+      suppressHydrationWarning
       className="inline-flex h-9 items-center justify-center rounded-btn border border-hairline bg-surface-card px-3 font-sans text-caption-uppercase text-ink transition hover:border-primary/40 hover:bg-primary hover:text-on-primary disabled:cursor-not-allowed disabled:border-hairline disabled:bg-surface-cream-strong disabled:text-muted-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:disabled:bg-dark-surface-strong dark:disabled:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
     >
       {pending ? 'Returning…' : 'Return'}

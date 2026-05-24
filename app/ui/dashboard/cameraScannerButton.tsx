@@ -14,6 +14,7 @@ import {
   QrCodeIcon,
   CheckCircleIcon,
   ArrowLeftIcon,
+  ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline';
 import { scanBlob } from '@/lib/barcodeScanner';
 
@@ -232,49 +233,69 @@ export default function CameraScannerButton({
   return (
     <>
       {/* ---------- Trigger zone (on page) ---------- */}
-      <div className={clsx('flex flex-col gap-2.5', className)}>
+      <div className={clsx('flex flex-col gap-3', className)}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-3">
+        {/* Primary: Scan with camera */}
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="group relative flex w-full items-center gap-4 overflow-hidden rounded-card bg-primary p-5 text-left text-on-primary transition hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+          className="group relative flex w-full flex-1 items-center gap-3 overflow-hidden rounded-card bg-primary px-3.5 py-3 text-left text-on-primary transition hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
         >
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-on-primary/10 blur-sm transition group-hover:scale-110"
+            className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-on-primary/10 blur-sm transition group-hover:scale-110"
           />
-          <span className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-card border border-on-primary/25 bg-on-primary/15 backdrop-blur-sm">
-            <ViewfinderCircleIcon className="h-6 w-6" strokeWidth={1.8} />
+          <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border border-on-primary/25 bg-on-primary/15 backdrop-blur-sm">
+            <ViewfinderCircleIcon className="h-5 w-5" strokeWidth={1.8} />
           </span>
           <span className="relative min-w-0 flex-1">
-            <span className="block font-sans text-caption-uppercase font-semibold opacity-85">
+            <span className="block font-sans text-[9px] font-bold uppercase tracking-[1.3px] opacity-85">
               Fastest way
             </span>
-            <span className="mt-0.5 block font-display text-display-sm font-semibold leading-tight tracking-tight">
+            <span className="block font-display text-[15px] font-semibold leading-tight">
               Scan with camera
             </span>
-            <span className="mt-0.5 block font-sans text-body-sm opacity-80">
-              Point at the barcode &middot; auto-captures
+            <span className="block font-sans text-[11px] opacity-80">
+              Point at the barcode · auto-captures
             </span>
           </span>
-          <QrCodeIcon className="relative h-5 w-5 flex-shrink-0 opacity-70" />
+          <QrCodeIcon className="relative h-4 w-4 flex-shrink-0 opacity-70" />
         </button>
 
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => uploadInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 font-sans text-body-sm font-medium text-muted dark:text-on-dark-soft underline-offset-4 transition hover:text-primary dark:hover:text-dark-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          >
-            <PhotoIcon className="h-3.5 w-3.5" />
-            {uploadLabel}
-          </button>
-          {lastScan && (
-            <span className="inline-flex items-center gap-1.5 rounded-pill border border-success/30 bg-success/10 px-2.5 py-0.5 font-mono text-code font-semibold text-success">
-              <CheckCircleIcon className="h-3 w-3" />
-              {lastScanPrefix} &middot; {lastScan}
+        {/* Secondary: Upload a photo (same coral as Scan) */}
+        <button
+          type="button"
+          onClick={() => uploadInputRef.current?.click()}
+          className="group relative flex w-full flex-1 items-center gap-3 overflow-hidden rounded-card bg-primary px-3.5 py-3 text-left text-on-primary transition hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-on-primary/10 blur-sm transition group-hover:scale-110"
+          />
+          <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border border-on-primary/25 bg-on-primary/15 backdrop-blur-sm">
+            <PhotoIcon className="h-5 w-5" strokeWidth={1.8} />
+          </span>
+          <span className="relative min-w-0 flex-1">
+            <span className="block font-sans text-[9px] font-bold uppercase tracking-[1.3px] opacity-85">
+              No camera?
             </span>
-          )}
+            <span className="block font-display text-[15px] font-semibold leading-tight">
+              {uploadLabel}
+            </span>
+            <span className="block font-sans text-[11px] opacity-80">
+              Pick an image from your device
+            </span>
+          </span>
+          <ArrowUpTrayIcon className="relative h-4 w-4 flex-shrink-0 opacity-70" />
+        </button>
         </div>
+
+        {lastScan && (
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-pill border border-success/30 bg-success/10 px-2.5 py-0.5 font-mono text-code font-semibold text-success">
+            <CheckCircleIcon className="h-3 w-3" />
+            {lastScanPrefix} &middot; {lastScan}
+          </span>
+        )}
 
         {statusMessage && (
           <p className="font-sans text-body-sm font-medium text-muted dark:text-on-dark-soft">

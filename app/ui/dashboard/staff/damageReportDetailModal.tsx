@@ -3,6 +3,7 @@
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import type { DamageReportRow, DamageSeverity } from '@/app/lib/supabase/queries';
+import { createPortal } from 'react-dom';
 
 // Severity palette remap from raw amber/rose/sky to semantic tokens
 // (extends Chat 12 STAGE_STYLES + Chat 14 STATUS_STYLE precedent).
@@ -42,14 +43,14 @@ export default function DamageReportDetailModal({ report, signedUrls, onClose }:
         })
       : '—';
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="damage-detail-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4"
     >
-      <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm dark:bg-dark-canvas/70" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-card border border-hairline bg-surface-card p-6 shadow-[0_4px_16px_rgba(20,20,19,0.08)] dark:border-dark-hairline dark:bg-dark-surface-card">
         {/* Header */}
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -187,6 +188,7 @@ export default function DamageReportDetailModal({ report, signedUrls, onClose }:
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

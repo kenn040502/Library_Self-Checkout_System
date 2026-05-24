@@ -38,12 +38,14 @@ const toStageBook = (book: Book, reason: string): StageBook => ({
   reason,
 });
 
+const MAX_BOOKS_PER_STAGE = 3;
+
 const fallbackSplit = (books: Book[]): Stage[] => {
   const total = books.length;
   const third = Math.ceil(total / 3);
-  const beginner = books.slice(0, third);
-  const intermediate = books.slice(third, third * 2);
-  const advanced = books.slice(third * 2);
+  const beginner = books.slice(0, third).slice(0, MAX_BOOKS_PER_STAGE);
+  const intermediate = books.slice(third, third * 2).slice(0, MAX_BOOKS_PER_STAGE);
+  const advanced = books.slice(third * 2).slice(0, MAX_BOOKS_PER_STAGE);
 
   const stages: Stage[] = [
     {
@@ -150,9 +152,9 @@ const assignWithGemini = async (
   }
 
   const stages: Stage[] = [
-    { level: 'Beginner', description: 'Start here — no prior knowledge needed', books: beginner },
-    { level: 'Intermediate', description: 'Build on the basics — some experience helpful', books: intermediate },
-    { level: 'Advanced', description: 'Deep dive — for those with solid foundations', books: advanced },
+    { level: 'Beginner', description: 'Start here — no prior knowledge needed', books: beginner.slice(0, MAX_BOOKS_PER_STAGE) },
+    { level: 'Intermediate', description: 'Build on the basics — some experience helpful', books: intermediate.slice(0, MAX_BOOKS_PER_STAGE) },
+    { level: 'Advanced', description: 'Deep dive — for those with solid foundations', books: advanced.slice(0, MAX_BOOKS_PER_STAGE) },
   ];
   return stages.filter((stage) => stage.books.length > 0);
 };

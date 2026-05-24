@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeftIcon, QrCodeIcon, BookmarkIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, QrCodeIcon, BookmarkIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { getDashboardSession } from '@/app/lib/auth/session';
 import { fetchBookById } from '@/app/lib/supabase/queries';
 import AdminShell from '@/app/ui/dashboard/adminShell';
@@ -25,6 +25,7 @@ export default async function BookDetailPage({ params }: PageProps) {
   const canBorrow = available > 0;
 
   const tags = book.tags ?? [];
+  const canEdit = user.role === 'staff' || user.role === 'admin';
 
   return (
     <>
@@ -34,13 +35,24 @@ export default async function BookDetailPage({ params }: PageProps) {
         title={book.title}
         description={book.author ? `by ${book.author}` : undefined}
         primaryAction={
-          <Link
-            href="/dashboard/book/items"
-            className="inline-flex items-center gap-1.5 rounded-btn border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card px-3.5 py-2.5 font-sans text-button text-ink/80 dark:text-on-dark/80 transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            Back to catalogue
-          </Link>
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Link
+                href={`/dashboard/admin/books/${book.id}/edit`}
+                className="inline-flex items-center gap-1.5 rounded-btn bg-primary hover:bg-primary-active px-3.5 py-2.5 font-sans text-button text-on-primary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+              >
+                <PencilSquareIcon className="h-4 w-4" />
+                Edit
+              </Link>
+            )}
+            <Link
+              href="/dashboard/book/items"
+              className="inline-flex items-center gap-1.5 rounded-btn border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card px-3.5 py-2.5 font-sans text-button text-ink/80 dark:text-on-dark/80 transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              Back to catalogue
+            </Link>
+          </div>
         }
       >
         <div className="grid gap-8 md:grid-cols-[260px,1fr]">

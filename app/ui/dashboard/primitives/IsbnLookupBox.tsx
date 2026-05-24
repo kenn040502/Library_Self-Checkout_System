@@ -20,6 +20,7 @@ export default function IsbnLookupBox({
       <input
         type="text"
         inputMode="numeric"
+        required
         placeholder="Enter ISBN (10 or 13 digits)"
         value={value}
         onChange={(e) => onChange(e.target.value)}

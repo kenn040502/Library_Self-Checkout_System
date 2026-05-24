@@ -1,6 +1,7 @@
 'use server';
 
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
+import { getDashboardSession } from '@/app/lib/auth/session';
 
 const normalizeRole = (value: string | undefined): 'user' | 'staff' | 'admin' | undefined => {
   if (!value) return undefined;
@@ -18,6 +19,11 @@ type UpdateUserInput = {
 
 export async function updateUserAction(updateData: UpdateUserInput) {
   try {
+    const { user: callerUser } = await getDashboardSession();
+    if (!callerUser || callerUser.role !== 'admin') {
+      return { success: false, error: 'Admins only.' };
+    }
+
     if (!updateData.id) {
       return { success: false, error: 'User ID is required.' };
     }

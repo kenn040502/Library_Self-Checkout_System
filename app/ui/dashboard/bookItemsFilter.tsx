@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useMemo, useRef, useTransition } from 'react';
+import React, { useMemo, useRef, useState, useTransition } from 'react';
 import clsx from 'clsx';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
   MagnifyingGlassIcon,
   Squares2X2Icon,
   ListBulletIcon,
+  CameraIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { CATEGORY_OPTIONS, type CategoryKey } from '@/app/ui/dashboard/bookCategories';
+import CameraScanModal from '@/app/ui/dashboard/admin/cameraScanModal';
 
 type SortField = 'title' | 'author' | 'year' | 'created_at';
 type SortOrder = 'asc' | 'desc';
@@ -39,6 +42,8 @@ export default function BookItemsFilter({ action, defaults, className }: Props) 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const q = defaults?.q ?? '';
@@ -46,8 +51,7 @@ export default function BookItemsFilter({ action, defaults, className }: Props) 
   const activeCategory = (defaults?.category ?? 'all') as CategoryKey;
 
   const baseParams = useMemo(() => {
-    const p = new URLSearchParams(searchParams?.toString() ?? '');
-    return p;
+    return new URLSearchParams(searchParams?.toString() ?? '');
   }, [searchParams]);
 
   const updateParams = (updates: Record<string, string | null>) => {
@@ -77,41 +81,82 @@ export default function BookItemsFilter({ action, defaults, className }: Props) 
       action={action}
       method="get"
       onSubmit={handleSubmit}
-      className={clsx(
-        'flex flex-col gap-3 lg:flex-row lg:items-center',
-        className,
-      )}
+      className={clsx('flex flex-col gap-3', className)}
     >
-      {/* Search box */}
-      <div className="relative flex-1 min-w-0 lg:max-w-sm">
-        <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-soft dark:text-on-dark-soft" />
-        <input
-          id="q"
-          name="q"
-          defaultValue={q}
-          placeholder="Search title, author, ISBN…"
-          className="w-full rounded-pill border border-hairline dark:border-dark-hairline bg-canvas dark:bg-dark-surface-soft py-2.5 pl-11 pr-4 font-sans text-body-sm text-ink dark:text-on-dark placeholder:text-muted-soft dark:placeholder:text-on-dark-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-        />
+      {/* Row 1: search input + camera button */}
+      <div className="flex items-center gap-2">
+        {/* Search — text-input spec: canvas bg, rounded-btn (8px), h-10, hairline border */}
+        <div className="relative min-w-0 flex-1">
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-soft dark:text-on-dark-soft" />
+          <input
+            id="q"
+            name="q"
+            defaultValue={q}
+            placeholder="Search title, author, ISBN…"
+            suppressHydrationWarning
+            className="h-10 w-full rounded-btn border border-hairline bg-canvas py-2.5 pl-9 pr-12 font-sans text-body-sm text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+          />
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            aria-label="Scan with camera"
+            suppressHydrationWarning
+            className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center text-primary transition hover:text-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:text-dark-primary dark:hover:text-dark-primary"
+          >
+            <CameraIcon className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Category pills */}
-      <div className="flex flex-1 flex-wrap items-center gap-1.5 lg:justify-center">
+      {/* Row 2: view toggle + refresh */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => updateParams({ view: view === 'grid' ? 'list' : 'grid' })}
+          aria-label={view === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+          suppressHydrationWarning
+          className="flex h-10 w-full items-center justify-between rounded-btn border border-hairline bg-canvas px-3 text-left text-ink transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark"
+        >
+          <span className="font-sans text-body-sm">
+            {view === 'grid' ? 'Grid view' : 'List view'}
+          </span>
+          {view === 'grid' ? (
+            <Squares2X2Icon className="h-4 w-4" />
+          ) : (
+            <ListBulletIcon className="h-4 w-4" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setRefreshing(true);
+            window.setTimeout(() => window.location.reload(), 80);
+          }}
+          aria-label="Refresh results"
+          suppressHydrationWarning
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-canvas text-muted transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark-soft dark:hover:text-on-dark"
+        >
+          <ArrowPathIcon className={clsx('h-4 w-4', refreshing && 'animate-spin')} />
+        </button>
+      </div>
+
+      {/* Row 2: category tabs — category-tab / category-tab-active per DESIGN.md */}
+      <div className="flex items-center gap-0.5 overflow-x-auto rounded-lg bg-surface-soft p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:bg-dark-surface-soft">
         {CATEGORY_OPTIONS.map((cat) => {
           const active = cat.key === activeCategory;
           return (
             <button
               key={cat.key}
               type="button"
-              onClick={() =>
-                updateParams({ category: cat.key === 'all' ? null : cat.key })
-              }
+              onClick={() => updateParams({ category: cat.key === 'all' ? null : cat.key })}
               disabled={isPending}
               aria-pressed={active}
+              suppressHydrationWarning
               className={clsx(
-                'rounded-pill px-3.5 py-1.5 font-sans text-body-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas',
+                'flex-shrink-0 whitespace-nowrap rounded px-3.5 py-1.5 font-sans text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 active
-                  ? 'bg-ink text-on-dark dark:bg-on-dark dark:text-ink'
-                  : 'border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card text-body dark:text-on-dark/70 hover:border-primary/30 hover:text-ink dark:hover:text-on-dark',
+                  ? 'bg-canvas text-ink shadow-sm dark:bg-dark-surface-card dark:text-on-dark'
+                  : 'text-muted hover:text-body dark:text-on-dark-soft dark:hover:text-on-dark',
               )}
             >
               {cat.label}
@@ -120,41 +165,19 @@ export default function BookItemsFilter({ action, defaults, className }: Props) 
         })}
       </div>
 
-      {/* Grid/List toggle */}
-      <div className="inline-flex items-center rounded-pill border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card p-1">
-        <button
-          type="button"
-          onClick={() => updateParams({ view: 'grid' })}
-          aria-pressed={view === 'grid'}
-          aria-label="Grid view"
-          className={clsx(
-            'flex h-8 w-8 items-center justify-center rounded-pill transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas',
-            view === 'grid'
-              ? 'bg-ink text-on-dark dark:bg-on-dark dark:text-ink'
-              : 'text-muted-soft hover:text-ink dark:text-on-dark-soft dark:hover:text-on-dark',
-          )}
-        >
-          <Squares2X2Icon className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => updateParams({ view: 'list' })}
-          aria-pressed={view === 'list'}
-          aria-label="List view"
-          className={clsx(
-            'flex h-8 w-8 items-center justify-center rounded-pill transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas',
-            view === 'list'
-              ? 'bg-ink text-on-dark dark:bg-on-dark dark:text-ink'
-              : 'text-muted-soft hover:text-ink dark:text-on-dark-soft dark:hover:text-on-dark',
-          )}
-        >
-          <ListBulletIcon className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Hidden fields so the default URL submit works if JS is off */}
+      {/* Hidden fields for JS-off fallback */}
       <input type="hidden" name="view" value={view} />
       <input type="hidden" name="category" value={activeCategory} />
+
+      {scannerOpen && (
+        <CameraScanModal
+          onResult={(value) => {
+            updateParams({ q: value.trim() || null });
+            setScannerOpen(false);
+          }}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
     </form>
   );
 }

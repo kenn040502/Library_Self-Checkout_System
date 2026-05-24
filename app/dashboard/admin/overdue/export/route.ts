@@ -10,7 +10,7 @@ const validBucket = (v?: string | null): OverdueBucket =>
 export async function GET(request: NextRequest) {
   const { user } = await getDashboardSession();
   if (!user) return NextResponse.redirect(new URL('/login', request.url));
-  if (user.role !== 'admin') return NextResponse.redirect(new URL('/dashboard', request.url));
+  if (user.role !== 'admin' && user.role !== 'staff') return NextResponse.redirect(new URL('/dashboard', request.url));
 
   const params = request.nextUrl.searchParams;
   const bucket = validBucket(params.get('bucket'));

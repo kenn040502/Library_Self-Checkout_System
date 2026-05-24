@@ -26,8 +26,8 @@ export type UpdatePayload = {
   publisher?: string | null;
   publication_year?: string | number | null;
   tags?: string[] | null;
-  category?: string | null;
   cover_image_url?: string | null;
+  category?: string | null;
   sip_status?: CopyStatus | null;
 };
 
@@ -49,7 +49,7 @@ const syncBookTags = async (
   const normalized = normalizeTags(tags);
 
   if (normalized.length === 0) {
-    await supabase.from('book_tag_links').delete().eq('book_id', bookId);
+    await supabase.from('BookTagsLinks').delete().eq('book_id', bookId);
     return;
   }
 
@@ -145,12 +145,30 @@ export async function updateBook(payload: UpdatePayload) {
   }
 
   if (payload.sip_status) {
-    const sipStatusValue = payload.sip_status.toLowerCase();
     const { error: copyStatusError } = await supabase
       .from('Copies')
-      .update({ status: sipStatusValue })
+      .update({ status: payload.sip_status })
       .eq('book_id', payload.id);
     if (copyStatusError) throw new Error(copyStatusError.message);
+  }
+
+  // Re-embed the book so semantic search stays in sync with edited title/author/tags/category.
+  try {
+    const { embed, buildBookEmbeddingText } = await import('@/app/lib/recommendations/embeddings');
+    const text = buildBookEmbeddingText({
+      title: payload.title,
+      author: payload.author,
+      publisher: payload.publisher,
+      classification: payload.classification,
+      category: payload.category,
+      tags: payload.tags ?? [],
+    });
+    if (text.trim()) {
+      const vector = await embed(text);
+      await supabase.from('Books').update({ embedding: vector }).eq('id', payload.id);
+    }
+  } catch (err) {
+    console.error('[updateBook] re-embed failed', err);
   }
 
   revalidatePath('/dashboard/book/items');

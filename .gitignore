@@ -52,7 +52,11 @@ pnpm-debug.log*
 .idea/
 .vscode/
 
-# Claude Code internals
-.claude/
+# Claude Code internals — ignore everything except the shared settings/skills
+# that should travel with the repo so cloud sessions get the same plugins.
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+.worktrees/
 
 certificates

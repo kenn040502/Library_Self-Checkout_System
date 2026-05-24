@@ -8,7 +8,6 @@ import {
   fetchHoldsForBook,
   cancelHoldForPatron,
 } from '@/app/lib/supabase/queries';
-import DashboardTitleBar from '@/app/ui/dashboard/dashboardTitleBar';
 import MyBooksTabs from '@/app/ui/dashboard/student/myBooksTabs';
 
 type Tab = 'current' | 'history' | 'reservations';
@@ -73,12 +72,6 @@ export default async function MyBooksPage({
   return (
     <main className="space-y-8">
       <title>My Books | Dashboard</title>
-
-      <DashboardTitleBar
-        subtitle="My Books"
-        title="Your Library"
-        description="View your current loans, borrowing history, and active reservations."
-      />
 
       <MyBooksTabs
         activeLoans={activeLoans}

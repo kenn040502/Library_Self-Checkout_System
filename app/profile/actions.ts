@@ -126,19 +126,21 @@ export async function updateProfileAvatar(
     // Upload file to Supabase Storage
     const fileExt = avatarFile.name.split('.').pop();
     const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(fileName, avatarFile, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
       });
 
     if (uploadError) {
       console.error('Error uploading file:', uploadError);
-      return { status: 'error', message: 'Error uploading file.' };
+      const msg = uploadError.message.includes('Bucket not found')
+        ? 'Storage bucket not configured. Contact the administrator.'
+        : 'Failed to upload image. Please try again.';
+      return { status: 'error', message: msg };
     }
 
-    // Get public URL for the uploaded file
     const { data: { publicUrl } } = supabase.storage
       .from('avatars')
       .getPublicUrl(fileName);
@@ -182,6 +184,7 @@ export async function updateProfileAction(
     const phoneNumber = formData.get('phone')?.toString().trim();
 
     const updateData = {
+      display_name: formData.get('display_name')?.toString().trim() || null,
       username: formData.get('username')?.toString().trim() || null,
       phone: phoneNumber || null,
       preferred_language: formData.get('preferred_language')?.toString().trim() || null,

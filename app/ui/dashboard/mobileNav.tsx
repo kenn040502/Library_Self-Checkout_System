@@ -30,6 +30,7 @@ import {
 import clsx from 'clsx';
 import MobileMenu from '@/app/ui/dashboard/mobileMenu';
 import ThemeToggle from '@/app/ui/theme/themeToggle';
+import NotificationPopover from '@/app/ui/dashboard/notificationPopover';
 import type { DashboardUserProfile, DashboardRole } from '@/app/lib/auth/types';
 
 type BottomNavItem = {
@@ -50,14 +51,14 @@ const BOTTOM_NAV_BY_ROLE: Record<DashboardRole, BottomNavItem[]> = {
     { key: 'browse', label: 'Browse', href: '/dashboard/book/items', icon: MagnifyingGlassIcon },
     { key: 'borrow', label: 'Borrow', href: '/dashboard/book/checkout', icon: QrCodeIcon, isCenter: true },
     { key: 'books', label: 'My Books', href: '/dashboard/my-books', icon: BookOpenIcon },
-    { key: 'alerts', label: 'Alerts', href: '/dashboard/notifications', icon: BellIcon },
+    { key: 'alerts', label: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
   ],
   staff: [
     { key: 'desk', label: 'Desk', href: '/dashboard', icon: HomeIcon },
     { key: 'return', label: 'Return', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
     { key: 'borrow', label: 'Borrow', href: '/dashboard/book/checkout', icon: QrCodeIcon, isCenter: true },
     { key: 'holds', label: 'Holds', href: '/dashboard/book/holds', icon: BookmarkIcon },
-    { key: 'alerts', label: 'Alerts', href: '/dashboard/notifications', icon: BellIcon },
+    { key: 'alerts', label: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
   ],
   admin: [
     { key: 'overview', label: 'Overview', href: '/dashboard/admin', icon: HomeIcon },
@@ -259,14 +260,16 @@ export default function MobileNav({ user, isBypassed }: MobileNavProps) {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Image
-            src="/swinburne-logo.png"
-            alt="Swinburne"
-            width={100}
-            height={34}
-            priority
-            className="h-[34px] w-auto rounded-sm"
-          />
+          <Link href="/dashboard">
+            <Image
+              src="/swinburne-logo.png"
+              alt="Swinburne"
+              width={100}
+              height={34}
+              priority
+              className="h-[34px] w-auto rounded-sm"
+            />
+          </Link>
           <span
             className={clsx(
               'rounded-pill px-2 py-0.5 font-mono text-[9px] font-bold tracking-[1.8px]',
@@ -287,6 +290,7 @@ export default function MobileNav({ user, isBypassed }: MobileNavProps) {
               DEV
             </span>
           )}
+          <NotificationPopover hasUnread={hasUnread} onAllRead={() => setHasUnread(false)} />
           <ThemeToggle size="sm" />
         </div>
       </header>
@@ -334,6 +338,7 @@ export default function MobileNav({ user, isBypassed }: MobileNavProps) {
                   onClick={() => setIsMoreOpen((prev) => !prev)}
                   aria-expanded={isMoreOpen}
                   aria-controls="mobile-more-sheet"
+                  suppressHydrationWarning
                   className={clsx(
                     'flex flex-1 flex-col items-center gap-0.5 py-1 transition-colors',
                     active ? 'text-primary dark:text-dark-primary' : 'text-muted dark:text-on-dark-soft',

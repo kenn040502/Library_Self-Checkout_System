@@ -1,7 +1,14 @@
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
 
+export type BorrowedBookSummary = {
+  title: string;
+  author: string | null;
+  borrowedAt: string | null;
+};
+
 export type UserContext = {
   historyTags: string[];
+  recentBorrowedBooks: BorrowedBookSummary[];
   savedInterests: string[];
   faculty: string | null;
   department: string | null;
@@ -9,8 +16,11 @@ export type UserContext = {
 };
 
 type RawLoanHistoryRow = {
+  borrowed_at: string | null;
   copy: {
     book: {
+      title: string | null;
+      author: string | null;
       book_tag_links: Array<{ tag: { name: string | null } | null }> | null;
     } | null;
   } | null;
@@ -27,7 +37,7 @@ type RawUserProfileRow = {
 };
 
 export async function fetchUserContext(userId: string): Promise<UserContext> {
-  if (!userId) return { historyTags: [], savedInterests: [], faculty: null, department: null, intakeYear: null };
+  if (!userId) return { historyTags: [], recentBorrowedBooks: [], savedInterests: [], faculty: null, department: null, intakeYear: null };
 
   const supabase = getSupabaseServerClient();
 
@@ -36,8 +46,11 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
       .from('Loans')
       .select(
         `
+          borrowed_at,
           copy:Copies(
             book:Books(
+              title,
+              author,
               book_tag_links:BookTagsLinks(
                 tag:BookTags(name)
               )
@@ -62,14 +75,30 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
       .maybeSingle<RawUserProfileRow>(),
   ]);
 
-  // Extract and deduplicate history tags
+  // Extract and deduplicate history tags + recent borrowed book titles
   const historyTags: string[] = [];
   const tagSeen = new Set<string>();
+  const recentBorrowedBooks: BorrowedBookSummary[] = [];
+  const titleSeen = new Set<string>();
 
   if (!loansResult.error && loansResult.data) {
     const rows = loansResult.data as unknown as RawLoanHistoryRow[];
     for (const row of rows) {
-      const links = row.copy?.book?.book_tag_links ?? [];
+      const book = row.copy?.book;
+      const title = typeof book?.title === 'string' ? book.title.trim() : '';
+      if (title) {
+        const titleKey = title.toLowerCase();
+        if (!titleSeen.has(titleKey)) {
+          titleSeen.add(titleKey);
+          recentBorrowedBooks.push({
+            title,
+            author: typeof book?.author === 'string' && book.author.trim() ? book.author.trim() : null,
+            borrowedAt: row.borrowed_at ?? null,
+          });
+        }
+      }
+
+      const links = book?.book_tag_links ?? [];
       for (const link of links) {
         const name = link?.tag?.name;
         if (typeof name === 'string' && name.trim().length > 0) {
@@ -101,7 +130,7 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
   const department = profileResult.data?.department?.trim() || null;
   const intakeYear = profileResult.data?.intake_year ?? null;
 
-  return { historyTags, savedInterests, faculty, department, intakeYear };
+  return { historyTags, recentBorrowedBooks, savedInterests, faculty, department, intakeYear };
 }
 
 export async function saveUserInterests(

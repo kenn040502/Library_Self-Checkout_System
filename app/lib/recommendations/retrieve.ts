@@ -1,111 +1,97 @@
 import type { Book } from '@/app/lib/supabase/types';
 import { fetchBooks } from '@/app/lib/supabase/queries';
-import { tokenizeInterests } from '@/app/lib/recommendations/recommender';
+import { getSupabaseServerClient } from '@/app/lib/supabase/server';
+import { embed } from '@/app/lib/recommendations/embeddings';
+import { tokenizeInterests, expandAcronyms } from '@/app/lib/recommendations/recommender';
 
 const DEFAULT_LIMIT = 200;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
-const sanitizeSearchTerm = (value: string) =>
-  value
-    .replace(/[,;]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-const unique = <T,>(values: T[]): T[] => Array.from(new Set(values));
-
-const normalizeToken = (token: string) =>
-  token.toLowerCase().replace(/^#+/, '').replace(/[^a-z0-9\-]/g, '').trim();
-
-const STOPWORDS = new Set([
-  'the', 'and', 'but', 'for', 'with', 'from', 'into', 'about', 'that',
-  'this', 'these', 'those', 'than', 'then', 'only', 'just', 'very',
-  'you', 'your', 'our', 'his', 'her', 'its', 'they', 'them', 'their',
-  'can', 'could', 'would', 'should', 'will', 'shall', 'may', 'might',
-  'want', 'like', 'need', 'know', 'think', 'look', 'find', 'use',
-  'get', 'got', 'give', 'take', 'make', 'see', 'come', 'say', 'let',
-  'share', 'show', 'tell', 'help', 'ask',
-  'book', 'books', 'read', 'reading',
-  'recommend', 'recommendation', 'recommendations', 'suggest', 'suggestions',
-  'some', 'more', 'most', 'each', 'every', 'please', 'thanks', 'learn', 'learning',
-  'me', 'yo', 'hi', 'hey', 'something', 'anything', 'everything', 'nothing',
-  'sure', 'okay',
-]);
-
-const buildTokens = (value: string): string[] => {
-  const tokens = tokenizeInterests(value)
-    .map(normalizeToken)
-    .filter((token) => token.length > 2 && !STOPWORDS.has(token));
-  return unique(tokens);
-};
-
-const collectSearchText = (book: Book) =>
-  [
-    book.title,
-    book.author,
-    book.classification,
-    book.publisher,
-    book.isbn,
-    (book.tags ?? []).join(' '),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-
-// Derive the expected study year from intake year (1-4, clamped)
-const getStudyYear = (intakeYear: number | null): number | null => {
+const studyYearFromIntake = (intakeYear: number | null): number | null => {
   if (!intakeYear) return null;
   const year = new Date().getFullYear() - intakeYear + 1;
   return Math.min(Math.max(year, 1), 4);
 };
 
-// Map study year to expected book level
 const studyYearToLevel = (studyYear: number): number => {
   if (studyYear <= 1) return 1;
   if (studyYear <= 2) return 2;
   return 3;
 };
 
-const scoreBook = (
-  book: Book,
-  tokens: string[],
+// Re-rank vector matches with category/level bonuses so faculty-aligned books bubble up.
+const applyContextBoost = (
+  base: { book: Book; score: number }[],
   preferredCategory: string | null,
   studyYear: number | null,
-): number => {
-  if (!tokens.length) return 0;
+): { book: Book; score: number }[] => {
+  return base
+    .map(({ book, score }) => {
+      let boosted = score;
+      if (preferredCategory && book.category === preferredCategory) {
+        boosted += 0.05;
+      }
+      if (studyYear && book.level) {
+        const expected = studyYearToLevel(studyYear);
+        if (book.level === expected) boosted += 0.03;
+        else if (Math.abs(book.level - expected) === 1) boosted += 0.015;
+      }
+      return { book, score: boosted };
+    })
+    .sort((a, b) => b.score - a.score);
+};
 
+// Extract phrases (comma/period-separated) and individual content words from a query.
+// Returns both granularities so a book tagged "artificial intelligence" matches the phrase,
+// and a book tagged just "ai" still matches the token.
+const buildQueryTerms = (query: string): { phrases: string[]; tokens: string[] } => {
+  const phrases = query
+    .split(/[,.;]+/)
+    .map((p) => p.trim().toLowerCase())
+    .filter((p) => p.length > 1);
+
+  const tokens = expandAcronyms(tokenizeInterests(query)).map((t) => t.toLowerCase());
+  const expandedPhrases = expandAcronyms(phrases).map((t) => t.toLowerCase());
+
+  return {
+    phrases: Array.from(new Set([...phrases, ...expandedPhrases])),
+    tokens: Array.from(new Set(tokens)),
+  };
+};
+
+// Tag-first / text-fallback retrieval against the full in-memory catalog.
+// Scores books by:
+//   +3.0 exact tag match to a query phrase (e.g. tag "artificial intelligence" == phrase "artificial intelligence")
+//   +2.0 tag contains / is contained in a query phrase or token
+//   +1.5 query token appears in tag
+//   +1.0 query phrase appears in title
+//   +0.6 query token appears in title
+//   +0.4 query token appears in author / classification / publisher
+const tagAndTextScore = (book: Book, phrases: string[], tokens: string[]): number => {
+  const tags = (book.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean);
   const title = (book.title ?? '').toLowerCase();
   const author = (book.author ?? '').toLowerCase();
-  const tags = (book.tags ?? []).map((tag) => tag.toLowerCase());
   const classification = (book.classification ?? '').toLowerCase();
   const publisher = (book.publisher ?? '').toLowerCase();
-  const isbn = (book.isbn ?? '').toLowerCase();
-  const corpus = collectSearchText(book);
 
   let score = 0;
 
-  // Token matching
+  for (const phrase of phrases) {
+    if (!phrase) continue;
+    if (tags.includes(phrase)) score += 3.0;
+    else if (tags.some((tag) => tag.includes(phrase) || phrase.includes(tag))) score += 2.0;
+    if (title.includes(phrase)) score += 1.0;
+  }
+
   for (const token of tokens) {
-    if (title.includes(token)) score += 6;
-    if (tags.some((tag) => tag.includes(token))) score += 5;
-    if (author.includes(token)) score += 4;
-    if (classification.includes(token)) score += 3;
-    if (publisher.includes(token)) score += 2;
-    if (isbn.includes(token)) score += 2;
-    if (corpus.includes(token)) score += 1;
-  }
-
-  // Faculty/category bonus — books matching the student's faculty get priority
-  if (preferredCategory && book.category === preferredCategory) {
-    score += 3;
-  }
-
-  // Level bonus — books matching the student's study year level get priority
-  if (studyYear && book.level) {
-    const expectedLevel = studyYearToLevel(studyYear);
-    if (book.level === expectedLevel) score += 2;
-    else if (Math.abs(book.level - expectedLevel) === 1) score += 1; // adjacent level is ok
+    if (!token || token.length < 2) continue;
+    if (tags.some((tag) => tag.includes(token))) score += 1.5;
+    if (title.includes(token)) score += 0.6;
+    if (author.includes(token)) score += 0.4;
+    if (classification.includes(token)) score += 0.4;
+    if (publisher.includes(token)) score += 0.3;
   }
 
   return score;
@@ -118,31 +104,86 @@ export async function retrieveCandidateBooks(
   intakeYear: number | null = null,
 ): Promise<Book[]> {
   const sanitizedLimit = clamp(limit, 20, DEFAULT_LIMIT);
-  const sanitizedTerm = sanitizeSearchTerm(searchTerm);
-  const tokens = buildTokens(sanitizedTerm);
-  const studyYear = getStudyYear(intakeYear);
+  const trimmed = searchTerm.trim();
+  const studyYear = studyYearFromIntake(intakeYear);
 
   const allBooks = await fetchBooks();
+
+  if (!trimmed) {
+    return allBooks.slice(0, sanitizedLimit);
+  }
+
+  const supabase = getSupabaseServerClient();
+
+  // Vector search (semantic) and tag/text pass run in parallel.
+  const vectorPromise = (async () => {
+    try {
+      const queryVector = await embed(trimmed);
+      const { data, error } = await supabase.rpc('match_books', {
+        query_embedding: queryVector,
+        match_count: sanitizedLimit,
+      });
+      if (error) {
+        console.error('[recommendations] vector search failed', error);
+        return [] as Array<{ id: string; score: number }>;
+      }
+      return ((data ?? []) as Array<{ id: string; score: number }>).map((row) => ({
+        id: row.id,
+        score: row.score ?? 0,
+      }));
+    } catch (err) {
+      console.error('[recommendations] embedding failed', err);
+      return [] as Array<{ id: string; score: number }>;
+    }
+  })();
+
+  const { phrases, tokens } = buildQueryTerms(trimmed);
+  const tagScored = allBooks
+    .map((book) => ({ book, score: tagAndTextScore(book, phrases, tokens) }))
+    .filter((entry) => entry.score > 0);
+
+  const vectorScored = await vectorPromise;
+
   console.info(
     '[recommendations] catalog size:', allBooks.length,
-    '| tokens:', tokens.length ? tokens.join(', ') : '(none)',
+    '| query:', trimmed,
+    '| vector matches:', vectorScored.length,
+    '| tag/text matches:', tagScored.length,
     '| category:', preferredCategory ?? 'any',
     '| study year:', studyYear ?? 'unknown',
   );
 
-  if (!tokens.length) {
+  // Merge vector + tag/text scores. Tag/text matches get a small baseline bonus so
+  // that a directly-tagged book always out-ranks a weak vector match.
+  const bookById = new Map(allBooks.map((b) => [b.id, b]));
+  const mergedScore = new Map<string, { book: Book; score: number }>();
+
+  for (const { id, score } of vectorScored) {
+    const book = bookById.get(id);
+    if (!book) continue;
+    mergedScore.set(id, { book, score });
+  }
+
+  for (const { book, score } of tagScored) {
+    const existing = mergedScore.get(book.id);
+    // Normalize tag/text score onto roughly the same scale as cosine similarity (0..1).
+    // A fully-matched tag phrase (score ~3) becomes ~0.9, weaker matches scale down.
+    const normalized = Math.min(1, 0.3 + score * 0.2);
+    if (existing) {
+      existing.score = Math.max(existing.score, normalized) + 0.1;
+    } else {
+      mergedScore.set(book.id, { book, score: normalized });
+    }
+  }
+
+  const merged = Array.from(mergedScore.values());
+
+  // If we found NOTHING (no vector match, no tag match), fall back to whole catalog
+  // so the caller can still surface popular/available books.
+  if (!merged.length) {
     return allBooks.slice(0, sanitizedLimit);
   }
 
-  const scored = allBooks
-    .map((book) => ({ book, score: scoreBook(book, tokens, preferredCategory, studyYear) }))
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.book.title.localeCompare(b.book.title);
-    });
-
-  const filtered = scored.filter((e) => e.score > 0);
-  const finalList = filtered.length ? filtered : scored;
-
-  return finalList.slice(0, sanitizedLimit).map((e) => e.book);
+  const reranked = applyContextBoost(merged, preferredCategory, studyYear);
+  return reranked.slice(0, sanitizedLimit).map((e) => e.book);
 }

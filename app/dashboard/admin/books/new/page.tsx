@@ -6,7 +6,7 @@ import AddBookForm from '@/app/ui/dashboard/admin/addBookForm';
 export default async function AddBookPage() {
   const { user } = await getDashboardSession();
   if (!user) redirect('/login');
-  if (user.role !== 'admin') redirect('/dashboard');
+  if (user.role !== 'admin' && user.role !== 'staff') redirect('/dashboard');
 
   return (
     <>

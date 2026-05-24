@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { checkOut } from '@/lib/sip2';
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
 import { createNotification } from '@/app/lib/supabase/notifications';
+import { countActiveLoansForPatron } from '@/app/lib/supabase/queries';
+import { STUDENT_LOAN_LIMIT } from '@/app/dashboard/loanPolicy';
 
 const SIP2_INSTITUTION_ID = process.env.SIP2_INSTITUTION_ID ?? 'LIB001';
 const SIP2_TERMINAL_PASSWORD = process.env.SIP2_TERMINAL_PASSWORD ?? 'term123';
@@ -61,6 +63,27 @@ export async function POST(request: Request) {
         { success: false, error: 'Missing patronIdentifier or itemIdentifier' },
         { status: 400 },
       );
+    }
+
+    // Enforce 3-book limit for student (user) role patrons
+    const supabaseForCheck = getSupabaseServerClient();
+    const { data: patronRow } = await supabaseForCheck
+      .from('Users')
+      .select('id, role')
+      .eq('id', patronIdentifier)
+      .maybeSingle<{ id: string; role: string | null }>();
+
+    if (patronRow && (!patronRow.role || patronRow.role === 'user')) {
+      const activeCount = await countActiveLoansForPatron(patronRow.id);
+      if (activeCount >= STUDENT_LOAN_LIMIT) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Loan limit reached (${activeCount}/${STUDENT_LOAN_LIMIT}). Return a book before borrowing another.`,
+          },
+          { status: 422 },
+        );
+      }
     }
 
     const now = new Date();

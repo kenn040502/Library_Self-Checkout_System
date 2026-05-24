@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   MagnifyingGlassIcon,
@@ -21,6 +21,7 @@ type Props = {
 
 export default function BorrowingHistoryFilter({ action = '/dashboard/book/history', defaults, className }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const q = defaults?.q ?? '';
   const period = defaults?.period ?? 'all';
@@ -98,14 +99,18 @@ export default function BorrowingHistoryFilter({ action = '/dashboard/book/histo
 
         {/* Reset */}
         <div className="flex items-center sm:ml-auto">
-          <a
-            href={action}
+          <button
+            type="button"
+            onClick={() => {
+              setRefreshing(true);
+              window.setTimeout(() => window.location.reload(), 80);
+            }}
             className="flex h-10 w-10 items-center justify-center rounded-pill border border-hairline bg-surface-card text-ink hover:bg-surface-cream-strong sm:h-auto sm:w-auto sm:rounded-btn sm:px-4 sm:py-2 dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong transition-colors"
             title="Reset Filters"
           >
-            <ArrowPathIcon className="h-5 w-5 sm:hidden" />
+            <ArrowPathIcon className={clsx('h-5 w-5 sm:hidden', refreshing && 'animate-spin')} />
             <span className="hidden sm:inline font-sans text-button">Reset</span>
-          </a>
+          </button>
         </div>
       </div>
     </form>

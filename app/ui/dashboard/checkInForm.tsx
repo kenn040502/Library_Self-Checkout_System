@@ -153,6 +153,7 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
             <input
               type="checkbox"
               checked={bulkMode}
+              suppressHydrationWarning
               onChange={(e) => {
                 setBulkMode(e.target.checked);
                 if (!e.target.checked) setBulkFeed([]);
@@ -172,6 +173,7 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
                 role="tab"
                 type="button"
                 aria-selected={active}
+                suppressHydrationWarning
                 onClick={() => setMode(m)}
                 className={clsx(
                   'flex-1 rounded-btn px-3 py-2 font-sans text-button transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
@@ -211,6 +213,7 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
                 ref={identifierRef}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
+                suppressHydrationWarning
                 required
                 placeholder="Scan SWI-xxxxx or paste loan ID"
                 autoComplete="off"
@@ -267,6 +270,7 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
               <button
                 type="button"
                 onClick={() => setDamage(null)}
+                suppressHydrationWarning
                 className="rounded-pill border border-warning/50 px-2 py-0.5 font-sans text-caption-uppercase font-semibold hover:bg-warning/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 Clear
@@ -277,6 +281,7 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
               type="button"
               onClick={() => setDamageOpen(true)}
               disabled={!canSubmit}
+              suppressHydrationWarning
               className="font-sans text-body-sm font-semibold text-muted dark:text-on-dark-soft underline underline-offset-2 transition hover:text-primary dark:hover:text-dark-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Report damage or missing
@@ -319,6 +324,7 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
+                suppressHydrationWarning
                 className="flex-1 rounded-btn border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card px-4 h-10 font-sans text-button text-ink dark:text-on-dark transition hover:bg-surface-cream-strong dark:hover:bg-dark-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
               >
                 Cancel
@@ -327,6 +333,7 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
                 ref={confirmButtonRef}
                 type="button"
                 onClick={doSubmit}
+                suppressHydrationWarning
                 className="flex-1 rounded-btn bg-primary hover:bg-primary-active px-4 h-10 font-sans text-button text-on-primary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
               >
                 Yes, mark returned
@@ -355,6 +362,7 @@ function SubmitButton({ disabled, onClick }: { disabled: boolean; onClick: () =>
       onClick={onClick}
       disabled={isDisabled}
       aria-disabled={isDisabled}
+      suppressHydrationWarning
       className="inline-flex items-center justify-center rounded-btn bg-primary hover:bg-primary-active px-5 h-10 font-sans text-button text-on-primary transition disabled:bg-primary-disabled disabled:text-muted disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
     >
       {pending ? 'Processing\u2026' : 'Mark returned'}

@@ -26,18 +26,19 @@ type BookCoverProps = {
   w?: number;
   h?: number;
   radius?: number;
+  /** Fill parent positioned container (position: absolute; inset: 0) instead of fixed px size */
+  fill?: boolean;
 };
 
-export default function BookCover({ gradient, title, author, w = 48, h = 68, radius = 4 }: BookCoverProps) {
+export default function BookCover({ gradient, title, author, w = 48, h = 68, radius = 4, fill = false }: BookCoverProps) {
   return (
     <div
       style={{
-        width: w,
-        height: h,
+        ...(fill
+          ? { position: 'absolute', inset: 0 }
+          : { position: 'relative', width: w, height: h, flexShrink: 0 }),
         borderRadius: radius,
-        flexShrink: 0,
         background: gradient,
-        position: 'relative',
         overflow: 'hidden',
       }}
     >
@@ -51,16 +52,16 @@ export default function BookCover({ gradient, title, author, w = 48, h = 68, rad
       {/* Gold foil lines */}
       <div style={{ position: 'absolute', left: 6, right: 4, top: '38%', height: 1, background: 'rgba(201,169,97,0.7)' }} />
       <div style={{ position: 'absolute', left: 6, right: 4, top: '62%', height: 1, background: 'rgba(201,169,97,0.5)' }} />
-      {title && w > 80 && (
+      {title && (fill || w > 80) && (
         <div style={{
           position: 'absolute', inset: 0, padding: '10px 8px 10px 10px',
           display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
           color: 'rgba(255,255,255,0.95)', fontFamily: 'var(--font-newsreader), Georgia, serif',
         }}>
-          <div style={{ fontSize: w > 120 ? 11 : 9, fontWeight: 600, lineHeight: 1.15, letterSpacing: 0.2, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: fill ? 11 : (w > 120 ? 11 : 9), fontWeight: 600, lineHeight: 1.15, letterSpacing: 0.2, textTransform: 'uppercase' }}>
             {title.length > 24 ? title.slice(0, 22) + '…' : title}
           </div>
-          <div style={{ fontSize: w > 120 ? 9 : 7.5, opacity: 0.8, fontStyle: 'italic', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>
+          <div style={{ fontSize: fill ? 9 : (w > 120 ? 9 : 7.5), opacity: 0.8, fontStyle: 'italic', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>
             {author}
           </div>
         </div>

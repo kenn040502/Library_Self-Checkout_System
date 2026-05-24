@@ -140,7 +140,7 @@ export default function HomePage() {
               underline-offset-4
             "
           >
-            © 2025 Swinburne Final Year Project • Group 12
+            © 2026 Swinburne Final Year Project • Group 12
           </p>
         </BlurFade>
       </footer>

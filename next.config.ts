@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['@xenova/transformers'],
   images: {
     remotePatterns: [
       {
@@ -13,11 +14,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'media.licdn.com',
+        hostname: 'i.ytimg.com',
       },
       {
         protocol: 'https',
-        hostname: 'static.licdn.com',
+        hostname: 'img.youtube.com',
       },
       {
         protocol: 'https',

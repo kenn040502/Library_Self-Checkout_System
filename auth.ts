@@ -4,6 +4,7 @@ import NextAuth, { type NextAuthOptions } from 'next-auth';
 import type { Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import AzureADProvider from 'next-auth/providers/azure-ad';
+import LinkedInProvider from 'next-auth/providers/linkedin';
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
 import type { DashboardRole } from '@/app/lib/auth/types';
 
@@ -17,6 +18,9 @@ const clientSecret =
 const tenantId =
   process.env.AZURE_AD_TENANT_ID ?? process.env.AUTH_AZURE_AD_TENANT_ID ?? undefined;
 const resolvedSecret = process.env.NEXTAUTH_SECRET ?? (isDevelopment ? 'dev-secret' : undefined);
+
+const linkedInClientId = process.env.LINKEDIN_CLIENT_ID ?? undefined;
+const linkedInClientSecret = process.env.LINKEDIN_CLIENT_SECRET ?? undefined;
 
 if (isProduction) {
   const missing = [
@@ -131,6 +135,17 @@ const ensureProfile = async (userId: string) => {
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    ...(linkedInClientId && linkedInClientSecret
+      ? [
+          LinkedInProvider({
+            clientId: linkedInClientId,
+            clientSecret: linkedInClientSecret,
+            authorization: {
+              params: { scope: 'openid profile email' },
+            },
+          }),
+        ]
+      : []),
     AzureADProvider({
       clientId: clientId ?? 'development-client-id',
       clientSecret: clientSecret ?? 'development-client-secret',

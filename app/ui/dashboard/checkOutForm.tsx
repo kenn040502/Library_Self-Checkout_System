@@ -1,7 +1,6 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import clsx from 'clsx';
 import { useFormStatus } from 'react-dom';
 import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
@@ -57,9 +56,11 @@ export default function CheckOutForm({
   const [pickedPatron, setPickedPatron] = useState<PatronOption | null>(null);
   const [override, setOverride] = useState(false);
   const [showReceipt, setShowReceipt] = useState<null | { title: string; dueAt: string }>(null);
+  const handledStateRef = useRef<typeof state | null>(null);
 
   useEffect(() => {
-    if (state.status === 'success') {
+    if (state.status === 'success' && handledStateRef.current !== state) {
+      handledStateRef.current = state;
       const selected = selectedBookId ? bookMap.get(selectedBookId) : null;
       setShowReceipt({
         title: selected?.title ?? 'Book',
@@ -73,7 +74,7 @@ export default function CheckOutForm({
       setPickedPatron(null);
       setOverride(false);
     }
-  }, [state.status, selectedBookId, bookMap, defaultDueDate]);
+  }, [state, selectedBookId, bookMap, defaultDueDate]);
 
   useEffect(() => {
     setBookOptions((prev) => {
@@ -260,16 +261,14 @@ export default function CheckOutForm({
       </div>
 
       {/* Scan row */}
-      <div className="flex flex-wrap items-center gap-2">
-        <CameraScannerButton
-          onDetected={(code) => {
-            void handleScanDetected(code);
-          }}
-          modalDescription="Align the book barcode or ISBN within the frame."
-          lastScanPrefix="Latest scan:"
-          className="w-full md:w-auto"
-        />
-      </div>
+      <CameraScannerButton
+        onDetected={(code) => {
+          void handleScanDetected(code);
+        }}
+        modalDescription="Align the book barcode or ISBN within the frame."
+        lastScanPrefix="Latest scan:"
+        className="w-full"
+      />
 
       {lookupMessage && (
         <p
@@ -288,35 +287,7 @@ export default function CheckOutForm({
         {/* Hidden contract with server action */}
         <input type="hidden" name="copyId" value={selectedCopyId} />
         <input type="hidden" name="itemIdentifier" value={selectedCopyBarcode ?? ''} />
-
-        {/* Book picker */}
-        <div>
-          <label className="mb-1.5 block font-sans text-caption-uppercase font-semibold text-muted dark:text-on-dark-soft" htmlFor="bookId">
-            Book to borrow
-          </label>
-          <select
-            id="bookId"
-            name="bookId"
-            value={selectedBookId}
-            onChange={(e) => setSelectedBookId(e.target.value)}
-            className="w-full rounded-btn border border-hairline dark:border-dark-hairline bg-canvas dark:bg-dark-surface-soft px-3.5 h-10 font-sans text-body-md text-ink dark:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-            required
-          >
-            <option value="" disabled>
-              {bookOptions.length ? 'Select a book' : 'No titles available'}
-            </option>
-            {bookOptions.map((book) => (
-              <option key={book.id} value={book.id}>
-                {book.label}
-              </option>
-            ))}
-          </select>
-          {bookOptions.length > 0 && (
-            <p className="mt-1 font-mono text-code text-muted-soft dark:text-on-dark-soft">
-              {bookOptions.length} titles ready to borrow.
-            </p>
-          )}
-        </div>
+        <input type="hidden" name="bookId" value={selectedBookId} />
 
         {/* Preview card for selected book */}
         {selectedBook && (
@@ -432,15 +403,7 @@ export default function CheckOutForm({
           <p className="font-sans text-body-sm font-semibold text-primary dark:text-dark-primary">{state.message}</p>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {!selfCheckout && (
-            <Link
-              href="/dashboard"
-              className="font-sans text-body-sm font-medium text-muted dark:text-on-dark-soft underline-offset-2 hover:underline hover:text-ink dark:hover:text-on-dark"
-            >
-              Cancel
-            </Link>
-          )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <SubmitButton
             disabled={!confirmEnabled}
             label={selfCheckout ? 'Confirm loan' : 'Confirm loan'}

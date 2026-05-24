@@ -1,9 +1,15 @@
 'use server';
 
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
+import { getDashboardSession } from '@/app/lib/auth/session';
 
 export async function deleteUserAction(id: string) {
   try {
+    const { user: callerUser } = await getDashboardSession();
+    if (!callerUser || callerUser.role !== 'admin') {
+      return { success: false, error: 'Admins only.' };
+    }
+
     if (!id) {
       return { success: false, error: 'User ID is required.' };
     }

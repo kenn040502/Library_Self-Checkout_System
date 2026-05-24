@@ -1,13 +1,9 @@
-// app/dashboard/book-items/page.tsx
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import BookList from '@/app/ui/dashboard/bookList';
 import BookItemsFilter from '@/app/ui/dashboard/bookItemsFilter';
 import { CATEGORY_OPTIONS, type CategoryKey } from '@/app/ui/dashboard/bookCategories';
 import { fetchBooks } from '@/app/lib/supabase/queries';
 import { getDashboardSession } from '@/app/lib/auth/session';
-import AdminShell from '@/app/ui/dashboard/adminShell';
-import { QrCodeIcon } from '@heroicons/react/24/outline';
 
 export type ItemStatus =
   | 'available'
@@ -76,10 +72,8 @@ export default async function BookItemsPage({
   };
 
   const q = (qp('q') ?? '').trim();
-
   const rawStatus = (qp('status') ?? '').trim();
   const statusFilter: ItemStatus | undefined = isItemStatus(rawStatus) ? rawStatus : undefined;
-
   const sort = (qp('sort') as SortField) || 'title';
   const order: SortOrder = (qp('order') as SortOrder) === 'desc' ? 'desc' : 'asc';
   const view: ViewMode = (qp('view') as ViewMode) === 'list' ? 'list' : 'grid';
@@ -109,57 +103,44 @@ export default async function BookItemsPage({
   });
 
   const isStaff = user.role !== 'user';
-
   return (
     <>
       <title>Book Catalogue | Dashboard</title>
 
-      <AdminShell
-        titleSubtitle="Catalogue"
-        title="Book Catalogue"
-        description="Browse and reserve books from the collection."
-        primaryAction={
-          <Link
-            href="/dashboard/book/checkout"
-            className="inline-flex items-center gap-1.5 rounded-btn bg-primary hover:bg-primary-active px-3.5 py-2.5 font-sans text-button text-on-primary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-          >
-            <QrCodeIcon className="h-4 w-4" />
-            Scan
-          </Link>
-        }
-      >
-        <div className="space-y-6">
-          <BookItemsFilter
-            action="/dashboard/book/items"
-            defaults={{
-              q,
-              status: statusFilter,
-              sort,
-              order,
-              view,
-              category,
-            }}
-          />
+      <div className="flex flex-col gap-6">
+        {/* ── Filter bar ── */}
+        <BookItemsFilter
+          action="/dashboard/book/items"
+          defaults={{
+            q,
+            status: statusFilter,
+            sort,
+            order,
+            view,
+            category,
+          }}
+        />
 
-          {/* Result count — only show when there's a search query */}
-          {q && (
-            <p className="font-mono text-code text-muted-soft dark:text-on-dark-soft">
-              {books.length === 0
-                ? `No books match "${q}"`
-                : `${books.length} ${books.length === 1 ? 'result' : 'results'} for "${q}"`}
-            </p>
-          )}
+        {/* ── Result count ── */}
+        {q && (
+          <p className="-mt-2 font-mono text-code text-muted-soft dark:text-on-dark-soft">
+            {books.length === 0
+              ? `No results for "${q}"`
+              : `${books.length} result${books.length === 1 ? '' : 's'} for "${q}"`}
+          </p>
+        )}
 
-          <BookList
-            books={books}
-            variant={view}
-            patronId={patronId}
-            isStaff={isStaff}
-            category={category}
-            searchQuery={q}
-          />
-        </div>
-      </AdminShell>
+        {/* ── Book list ── */}
+        <BookList
+          books={books}
+          variant={view}
+          patronId={patronId}
+          isStaff={isStaff}
+          category={category}
+          searchQuery={q}
+          canEdit={isStaff}
+        />
+      </div>
     </>
   );
 }

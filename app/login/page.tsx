@@ -30,5 +30,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     redirect(callbackUrl);
   }
 
-  return <LoginClient callbackUrl={callbackUrl} />;
+  const hasLinkedIn = !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET);
+
+  return <LoginClient callbackUrl={callbackUrl} hasLinkedIn={hasLinkedIn} />;
 }

@@ -6,6 +6,8 @@ import clsx from 'clsx';
 import { useRouter } from 'next/navigation';
 import PlaceHoldButton from './placeHoldButton';
 import ManageCopiesModal from './manageCopiesModal';
+import ManageBookModal from './manageBookModal';
+import { updateBook } from '@/app/lib/supabase/updates';
 import { Pagination } from '@/app/ui/dashboard/pagination';
 import BookCover, { getBookGradient } from '@/app/ui/dashboard/primitives/BookCover';
 import BlurFade from '@/app/ui/magicUi/blurFade';
@@ -157,6 +159,8 @@ type Props = {
   pageSize?: number;
   /** Search query — when provided, matched substrings in title/author are highlighted. */
   searchQuery?: string;
+  /** When true, render an Edit affordance on each row that links to the admin edit page. */
+  canEdit?: boolean;
 };
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -245,11 +249,71 @@ export default function BookList({
   category,
   pageSize,
   searchQuery,
+  canEdit = false,
 }: Props) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = React.useState(1);
   const [managingBookId, setManagingBookId] = React.useState<string | null>(null);
   const managingBook = managingBookId ? books.find((b) => b.id === managingBookId) : null;
+  const [editingBookId, setEditingBookId] = React.useState<string | null>(null);
+  const editingBook = editingBookId ? books.find((b) => b.id === editingBookId) : null;
+  const [editForm, setEditForm] = React.useState({
+    title: '',
+    author: '',
+    isbn: '',
+    classification: '',
+    publication_year: '',
+    publisher: '',
+    category: '',
+  });
+  const [editError, setEditError] = React.useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = React.useState(false);
+
+  const openEdit = (book: UIBook) => {
+    setEditError(null);
+    setEditingBookId(book.id);
+    setEditForm({
+      title: book.title ?? '',
+      author: book.author ?? '',
+      isbn: book.isbn ?? '',
+      classification: book.classification ?? '',
+      publication_year: book.year ? String(book.year) : '',
+      publisher: book.publisher ?? '',
+      category: book.category ?? '',
+    });
+  };
+
+  const closeEdit = () => {
+    setEditingBookId(null);
+    setEditError(null);
+    setIsSavingEdit(false);
+  };
+
+  const saveEdit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingBook) return;
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      await updateBook({
+        id: editingBook.id,
+        title: editForm.title.trim(),
+        author: editForm.author.trim() || null,
+        isbn: editForm.isbn.trim() || null,
+        classification: editForm.classification.trim() || null,
+        publication_year: editForm.publication_year.trim() || null,
+        publisher: editForm.publisher.trim() || null,
+        category: editForm.category.trim() || null,
+        tags: editingBook.tags ?? undefined,
+      });
+      closeEdit();
+      router.refresh();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update book.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const filteredBooks = React.useMemo(() => {
     if (!category || category === 'all') return books;
@@ -279,7 +343,7 @@ export default function BookList({
         <BlurFade
           delay={0.2}
           yOffset={10}
-          className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+          className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
         >
           {paginatedBooks.map((b, idx) => {
             const status = (b.status ?? 'available') as ItemStatus;
@@ -297,7 +361,7 @@ export default function BookList({
                     className="block"
                   >
                     {hasCover ? (
-                      <div className="relative overflow-hidden rounded-[10px] shadow-md transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-xl">
+                      <div className="relative overflow-hidden rounded-card shadow-sm transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-lg">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={b.cover!}
@@ -307,13 +371,12 @@ export default function BookList({
                         />
                       </div>
                     ) : (
-                      <div className="transition duration-300 group-hover:-translate-y-0.5 group-hover:[filter:drop-shadow(0_14px_24px_rgba(0,0,0,0.15))]">
+                      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-card shadow-sm transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-lg">
                         <BookCover
                           gradient={getBookGradient(b.id)}
                           title={b.title}
                           author={b.author}
-                          w={200}
-                          h={286}
+                          fill
                           radius={6}
                         />
                       </div>
@@ -337,14 +400,34 @@ export default function BookList({
                         <PlaceHoldButton bookId={b.id} patronId={patronId} bookTitle={b.title} />
                       )}
                       {isStaff && (
-                        <button
-                          type="button"
-                          onClick={() => setManagingBookId(b.id)}
-                          title="Manage copies"
-                          className="rounded-pill border border-hairline dark:border-dark-hairline px-2.5 py-0.5 text-[10px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(b)}
+                            suppressHydrationWarning
+                            className="rounded-pill border border-primary/30 px-2.5 py-0.5 text-[10px] font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/10 dark:focus-visible:ring-offset-dark-canvas"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setManagingBookId(b.id)}
+                            title="Manage copies"
+                            suppressHydrationWarning
+                            className="rounded-pill border border-hairline dark:border-dark-hairline px-2.5 py-0.5 text-[10px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+                          >
+                            Copies
+                          </button>
+                        </div>
+                      )}
+                      {canEdit && (
+                        <Link
+                          href={`/dashboard/admin/books/${b.id}/edit`}
+                          title="Edit book"
+                          className="rounded-pill border border-hairline dark:border-dark-hairline px-2.5 py-0.5 text-[10px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-primary dark:hover:text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
                         >
-                          Copies
-                        </button>
+                          Edit
+                        </Link>
                       )}
                     </div>
                   </div>
@@ -380,8 +463,8 @@ export default function BookList({
   // List variant
   return (
     <>
-      <div className="overflow-hidden rounded-card border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card">
-        <ul className="divide-y divide-hairline-soft dark:divide-dark-hairline">
+      <div className="overflow-hidden rounded-card border border-hairline bg-canvas dark:border-dark-hairline dark:bg-dark-surface-card">
+        <ul className="divide-y divide-hairline dark:divide-dark-hairline">
           {paginatedBooks.map((b, idx) => {
             const status = (b.status ?? 'available') as ItemStatus;
             const meta = STATUS_META[status] ?? STATUS_META.available;
@@ -390,12 +473,7 @@ export default function BookList({
 
             return (
               <BlurFade key={b.id} delay={0.15 + idx * 0.03} yOffset={8}>
-                <li
-                  className={clsx(
-                    'flex items-center gap-4 px-4 py-3 transition',
-                    idx % 2 === 1 && 'bg-surface-cream-strong/40 dark:bg-dark-surface-strong/40',
-                  )}
-                >
+                <li className="flex items-center gap-4 px-4 py-3 transition hover:bg-surface-soft dark:hover:bg-dark-surface-soft">
                   <Link
                     href={`/dashboard/book/${b.id}`}
                     aria-label={`View details for ${b.title}`}
@@ -439,13 +517,30 @@ export default function BookList({
                       </Link>
                     )}
                     {isStaff && (
-                      <button
-                        type="button"
-                        onClick={() => setManagingBookId(b.id)}
-                        className="rounded-pill border border-hairline dark:border-dark-hairline px-3 py-1 text-[11px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(b)}
+                          className="rounded-pill border border-primary/30 px-3 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/10 dark:focus-visible:ring-offset-dark-canvas"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setManagingBookId(b.id)}
+                          className="rounded-pill border border-hairline dark:border-dark-hairline px-3 py-1 text-[11px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+                        >
+                          Copies
+                        </button>
+                      </>
+                    )}
+                    {canEdit && (
+                      <Link
+                        href={`/dashboard/admin/books/${b.id}/edit`}
+                        className="rounded-pill border border-hairline dark:border-dark-hairline px-3 py-1 text-[11px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-primary dark:hover:text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
                       >
-                        Copies
-                      </button>
+                        Edit
+                      </Link>
                     )}
                   </div>
                 </li>
@@ -474,14 +569,115 @@ export default function BookList({
           onChanged={() => router.refresh()}
         />
       )}
+
+      {isStaff && (
+        <ManageBookModal open={editingBookId !== null} onClose={closeEdit} title="Edit book" lockScroll={false}>
+          <form className="space-y-3" onSubmit={saveEdit}>
+            <div>
+              <label className="block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">Title</label>
+              <input
+                className="mt-1 w-full rounded-btn border border-hairline bg-canvas px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+                value={editForm.title}
+                onChange={(event) => setEditForm((prev) => ({ ...prev, title: event.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">Author</label>
+                <input
+                  className="mt-1 w-full rounded-btn border border-hairline bg-canvas px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+                  value={editForm.author}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, author: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">ISBN</label>
+                <input
+                  className="mt-1 w-full rounded-btn border border-hairline bg-canvas px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+                  value={editForm.isbn}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, isbn: event.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">Call no.</label>
+                <input
+                  className="mt-1 w-full rounded-btn border border-hairline bg-canvas px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+                  value={editForm.classification}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, classification: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">Year</label>
+                <input
+                  className="mt-1 w-full rounded-btn border border-hairline bg-canvas px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+                  value={editForm.publication_year}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, publication_year: event.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">Publisher</label>
+                <input
+                  className="mt-1 w-full rounded-btn border border-hairline bg-canvas px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+                  value={editForm.publisher}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, publisher: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">Category</label>
+                <input
+                  className="mt-1 w-full rounded-btn border border-hairline bg-canvas px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark dark:placeholder:text-on-dark-soft dark:focus-visible:ring-offset-dark-canvas"
+                  value={editForm.category}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, category: event.target.value }))}
+                />
+              </div>
+            </div>
+
+            {editError && (
+              <p className="font-sans text-body-sm font-semibold text-primary dark:text-dark-primary">
+                {editError}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeEdit}
+                className="rounded-btn border border-hairline bg-surface-card px-4 py-2 font-sans text-button text-ink transition hover:bg-surface-cream-strong dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingEdit}
+                className="rounded-btn bg-primary px-4 py-2 font-sans text-button text-on-primary transition hover:bg-primary-active disabled:cursor-not-allowed disabled:bg-primary-disabled disabled:text-muted dark:bg-dark-primary dark:hover:bg-primary-active"
+              >
+                {isSavingEdit ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+        </ManageBookModal>
+      )}
     </>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="rounded-card border border-dashed border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card p-10 text-center font-sans text-body-sm text-muted dark:text-on-dark-soft">
-      No books match your search. Try a different keyword or clear filters.
+    <div className="flex flex-col items-center justify-center gap-2 rounded-card border border-dashed border-hairline bg-surface-soft px-6 py-14 text-center dark:border-dark-hairline dark:bg-dark-surface-soft">
+      <p className="font-display text-display-sm tracking-tight text-muted dark:text-on-dark-soft">
+        No books found
+      </p>
+      <p className="font-sans text-body-sm text-muted-soft dark:text-on-dark-soft">
+        Try a different keyword or clear the filters.
+      </p>
     </div>
   );
 }

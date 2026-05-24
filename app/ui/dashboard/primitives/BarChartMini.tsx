@@ -30,7 +30,7 @@ export default function BarChartMini({
               'flex-1 rounded-sm transition-all',
               isLast && highlightLast
                 ? 'bg-primary dark:bg-dark-primary'
-                : 'bg-surface-cream-strong dark:bg-dark-surface-strong',
+                : 'bg-primary/30 dark:bg-dark-primary/30',
             )}
             style={{
               height: `${(v / max) * 100}%`,

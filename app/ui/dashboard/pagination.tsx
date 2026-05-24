@@ -22,6 +22,7 @@ export function Pagination({
         disabled={currentPage === 1}
         className={buttonBaseClass}
         aria-label="Previous page"
+        suppressHydrationWarning
       >
         <ChevronDoubleLeftIcon className="h-5 w-5" />
       </button>
@@ -37,6 +38,7 @@ export function Pagination({
         disabled={currentPage === totalPages}
         className={buttonBaseClass}
         aria-label="Next page"
+        suppressHydrationWarning
       >
         <ChevronDoubleRightIcon className="h-5 w-5" />
       </button>

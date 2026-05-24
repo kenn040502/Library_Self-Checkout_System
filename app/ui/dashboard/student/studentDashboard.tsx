@@ -1,15 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   QrCodeIcon,
   BookOpenIcon,
   BookmarkIcon,
   SparklesIcon,
   ArrowRightIcon,
-  SunIcon,
-  MoonIcon,
 } from '@heroicons/react/24/outline';
 import type { Loan } from '@/app/lib/supabase/types';
 import type { PatronHold } from '@/app/lib/supabase/queries';
@@ -18,7 +15,6 @@ import HoldCard from '@/app/ui/dashboard/primitives/HoldCard';
 import BookCover, { getBookGradient } from '@/app/ui/dashboard/primitives/BookCover';
 import ScanCtaButton from '@/app/ui/dashboard/primitives/ScanCtaButton';
 import BlurFade from '@/app/ui/magicUi/blurFade';
-import { useTheme } from '@/app/ui/theme/themeProvider';
 
 export type BookPick = {
   id: string;
@@ -53,20 +49,20 @@ export default function StudentDashboard({
   holds,
   picks,
 }: StudentDashboardProps) {
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === 'dark';
   const mobilePicks = picks.slice(0, 4);
   const featuredPick = picks[0];
 
-  const urgentLoans = activeLoans.filter(l => {
-    const daysLeft = Math.ceil((new Date(l.dueAt).getTime() - Date.now()) / 86400000);
+  const urgentLoans = activeLoans.filter((loan) => {
+    const daysLeft = Math.ceil((new Date(loan.dueAt).getTime() - Date.now()) / 86_400_000);
     return daysLeft <= 3;
   });
-  const overdueLoans = activeLoans.filter(l =>
-    l.status === 'overdue' || new Date(l.dueAt).getTime() < Date.now()
+  const overdueLoans = activeLoans.filter((loan) =>
+    loan.status === 'overdue' || new Date(loan.dueAt).getTime() < Date.now()
   );
-  const readyHolds = holds.filter(h => h.status === 'ready');
-  const sortedHolds = [...holds].sort((a, b) => (a.status === 'ready' ? -1 : 1) - (b.status === 'ready' ? -1 : 1));
+  const readyHolds = holds.filter((hold) => hold.status === 'ready');
+  const sortedHolds = [...holds].sort((a, b) =>
+    (a.status === 'ready' ? -1 : 1) - (b.status === 'ready' ? -1 : 1)
+  );
 
   const firstName = getFirstName(userName);
   const greeting = getGreeting();
@@ -81,16 +77,6 @@ export default function StudentDashboard({
           <div className="px-5 pb-6 pt-5">
             <div className="mb-5 flex items-start justify-between">
               <div>
-                <div className="mb-3">
-                  <Image
-                    src="/swinburne-logo.png"
-                    alt="Swinburne University of Technology Sarawak Campus"
-                    width={140}
-                    height={65}
-                    className="rounded-sm"
-                    priority
-                  />
-                </div>
                 <p className="font-display text-[32px] font-[500] leading-none tracking-tight">
                   {greeting},
                 </p>
@@ -98,14 +84,6 @@ export default function StudentDashboard({
                   {firstName}.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="mt-1 flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface-card text-body transition hover:bg-surface-cream-strong hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark/70 dark:hover:bg-dark-surface-strong dark:hover:text-on-dark dark:focus-visible:ring-offset-dark-canvas"
-              >
-                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-              </button>
             </div>
 
             {/* Stats strip */}
@@ -157,7 +135,7 @@ export default function StudentDashboard({
                 href={q.href}
                 className="flex flex-col gap-2.5 rounded-card border border-hairline bg-surface-card p-4 transition hover:border-primary/20 dark:border-dark-hairline dark:bg-dark-surface-card dark:hover:border-dark-primary/30"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-accent-amber/12 text-accent-amber dark:bg-accent-amber/15">
+                <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-primary/10 text-primary dark:bg-dark-primary/20 dark:text-dark-primary">
                   <q.icon className="h-[18px] w-[18px]" />
                 </div>
                 <div>
@@ -175,23 +153,23 @@ export default function StudentDashboard({
             <div className="mx-5 mb-6">
               <Link
                 href="/dashboard/my-books?tab=reservations"
-                className="flex items-center gap-3 rounded-card bg-primary p-3.5 text-on-primary transition hover:bg-primary-active dark:bg-dark-primary dark:hover:bg-primary-active"
+                className="flex items-center gap-2.5 rounded-card bg-primary px-3 py-2.5 text-on-primary transition hover:bg-primary-active dark:bg-dark-primary dark:hover:bg-primary-active"
               >
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] bg-on-primary/18">
-                  <BookmarkIcon className="h-[18px] w-[18px]" />
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[8px] bg-on-primary/18">
+                  <BookmarkIcon className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[9px] font-bold uppercase tracking-[1.4px] opacity-85">
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-[1.4px] opacity-85">
                     {readyHolds.length > 1 ? `${readyHolds.length} holds ready · ` : 'Ready for pickup · '}
                     {readyHolds[0]?.expiresAt
                       ? `pickup by ${new Date(readyHolds[0].expiresAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })}`
                       : 'pick up soon'}
                   </p>
-                  <p className="truncate font-display text-[16px] font-semibold leading-tight tracking-tight">
+                  <p className="truncate font-display text-[14px] font-semibold leading-tight tracking-tight">
                     {readyHolds[0]?.title}
                   </p>
                 </div>
-                <ArrowRightIcon className="h-4.5 w-4.5 flex-shrink-0 opacity-80" />
+                <ArrowRightIcon className="h-4 w-4 flex-shrink-0 opacity-80" />
               </Link>
             </div>
           </BlurFade>
@@ -285,34 +263,6 @@ export default function StudentDashboard({
       {/* ========= DESKTOP LAYOUT (hidden on mobile) ========= */}
       <div className="hidden md:block">
         {/* Top bar */}
-        <div className="mb-8 flex items-center gap-4 border-b border-hairline pb-5 dark:border-dark-hairline">
-          <form
-            action="/dashboard/book/items"
-            method="get"
-            role="search"
-            className="flex flex-1 max-w-[520px] items-center gap-2.5 rounded-btn bg-surface-card px-3.5 py-2.5 transition focus-within:ring-2 focus-within:ring-primary/40 dark:bg-dark-surface-card"
-          >
-            <BookOpenIcon className="h-4 w-4 text-muted-soft dark:text-on-dark-soft" />
-            <label htmlFor="dash-search" className="sr-only">Search the catalogue</label>
-            <input
-              id="dash-search"
-              name="q"
-              type="search"
-              placeholder="Search titles, authors, or ISBN…"
-              className="flex-1 border-0 bg-transparent text-[14px] placeholder-muted-soft outline-none dark:placeholder-on-dark-soft"
-            />
-            <button
-              type="submit"
-              className="rounded-btn bg-primary/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-primary transition hover:bg-primary/20 dark:bg-dark-primary/15 dark:text-dark-primary"
-            >
-              Search
-            </button>
-          </form>
-          <div className="ml-auto flex items-center gap-1.5 text-[12px] text-muted dark:text-on-dark-soft">
-            <span>Sarawak Campus · Library B</span>
-          </div>
-        </div>
-
         {/* Hero + stats rail */}
         <div className="mb-8 grid grid-cols-[1.2fr_1fr] items-end gap-10">
           <div>
@@ -379,7 +329,7 @@ export default function StudentDashboard({
               href={q.href}
               className="flex items-center gap-3.5 rounded-card border border-hairline bg-surface-card p-5 transition hover:border-primary/20 dark:border-dark-hairline dark:bg-dark-surface-card dark:hover:border-dark-primary/30"
             >
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[12px] bg-accent-amber/12 text-accent-amber dark:bg-accent-amber/15">
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[12px] bg-primary/10 text-primary dark:bg-dark-primary/20 dark:text-dark-primary">
                 <q.icon className="h-5 w-5" />
               </div>
               <div className="flex-1">

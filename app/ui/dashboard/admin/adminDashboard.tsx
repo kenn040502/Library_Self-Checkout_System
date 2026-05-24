@@ -74,7 +74,7 @@ export default function AdminDashboard({
       title={`${tod}, ${firstName}`}
       description="Full catalogue and circulation access enabled. Sarawak Campus library is operating normally."
       primaryAction={
-        <Link href="/dashboard/book/items" className="contents">
+        <Link href="/dashboard/admin/books/new" className="contents">
           <Button>
             <PlusIcon className="mr-1.5 h-3.5 w-3.5" />
             Add book

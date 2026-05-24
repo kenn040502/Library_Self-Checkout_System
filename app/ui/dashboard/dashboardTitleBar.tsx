@@ -1,6 +1,4 @@
-import { BellIcon } from '@heroicons/react/24/outline';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 
 type DashboardTitleBarProps = {
   subtitle: string;
@@ -31,13 +29,6 @@ export default function DashboardTitleBar({
         )}
       </div>
       <div className="flex flex-shrink-0 items-center gap-3">
-        <Link
-          href="/dashboard/notifications"
-          className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-hairline bg-canvas text-muted transition hover:border-primary/20 hover:text-ink dark:border-dark-hairline dark:bg-dark-surface-card dark:text-muted dark:hover:text-on-dark"
-        >
-          <BellIcon className="h-4 w-4" />
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary ring-2 ring-canvas dark:ring-dark-canvas" />
-        </Link>
         {rightSlot}
       </div>
     </header>

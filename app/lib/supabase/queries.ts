@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
 import type { DashboardRole } from '@/app/lib/auth/types';
 import type { Book, Copy, DashboardSummary, Loan, LoanStatus } from '@/app/lib/supabase/types';
+import { isbnsMatch, normalizeIsbn } from '@/app/lib/supabase/isbnMatch';
 
 const sanitizeSearchTerm = (value?: string): string | null => {
   if (!value) return null;
@@ -397,8 +398,84 @@ export async function fetchActiveLoans(searchTerm?: string, userId?: string): Pr
       loan.book?.isbn ?? null,
     ];
 
-    return fields.some((field) => field?.toLowerCase().includes(lowered));
+    // Generic case-insensitive substring match (existing behaviour for names/title)
+    const substringHit = fields.some((field) => field?.toLowerCase().includes(lowered));
+    if (substringHit) return true;
+
+    // ISBN-aware match: if the search term looks ISBN-ish, also accept ISBN-10 ↔ ISBN-13
+    // equivalence against book.isbn — needed when the scanned cover ISBN differs in
+    // length or edition from the seeded ISBN.
+    const normTerm = normalizeIsbn(sanitized);
+    if (normTerm.length === 10 || normTerm.length === 13) {
+      if (isbnsMatch(loan.book?.isbn, sanitized)) return true;
+    }
+
+    return false;
   });
+}
+
+export async function fetchRecentlyReturnedLoans(
+  userId: string,
+  withinDays: number,
+  limit = 5,
+): Promise<Loan[]> {
+  if (!userId) return [];
+
+  const supabase = getSupabaseServerClient();
+  const cutoff = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from('Loans')
+    .select(
+      `
+        id,
+        copy_id,
+        user_id,
+        borrowed_at,
+        due_at,
+        returned_at,
+        renewed_count,
+        handled_by,
+        created_at,
+        updated_at,
+        copy:Copies(
+          id,
+          barcode,
+          book:Books(
+            id,
+            title,
+            author,
+            isbn
+          )
+        ),
+        borrower:Users!Loans_user_id_fkey(
+          id,
+          email,
+          role,
+          profile:UserProfile(
+            display_name,
+            student_id
+          )
+        ),
+        handler:Users!Loans_handled_by_fkey(
+          id,
+          email,
+          role,
+          profile:UserProfile(
+            display_name
+          )
+        )
+      `,
+    )
+    .not('returned_at', 'is', null)
+    .eq('user_id', userId)
+    .gte('returned_at', cutoff)
+    .order('returned_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (((data ?? []) as unknown) as RawLoanRow[]).map(mapLoanRow);
 }
 
 export async function fetchBooks(searchTerm?: string): Promise<Book[]> {
@@ -896,6 +973,131 @@ export async function fetchBorrowingStats(userId: string): Promise<BorrowingStat
 export async function fetchLoanHistory(userId: string, limit?: number): Promise<BorrowingHistoryLoan[]> {
   const history = await fetchBorrowingHistory(userId);
   return limit ? history.slice(0, limit) : history;
+}
+
+// ─── System-wide circulation history (staff / admin) ───────────────────────
+
+type RawCirculationRow = RawHistoryRow & {
+  borrower?: {
+    id: string;
+    email: string | null;
+    profile?: { display_name: string | null; student_id: string | null } | null;
+  } | null;
+};
+
+export type CirculationHistoryLoan = BorrowingHistoryLoan & {
+  patron: { id: string; name: string | null; email: string | null; studentId: string | null };
+};
+
+export async function fetchAllCirculationHistory(
+  searchTerm?: string,
+  period?: TimePeriod,
+): Promise<CirculationHistoryLoan[]> {
+  const supabase = getSupabaseServerClient();
+
+  let query = supabase
+    .from('Loans')
+    .select(
+      `
+        id,
+        borrowed_at,
+        due_at,
+        returned_at,
+        renewed_count,
+        copy:Copies(
+          id,
+          book:Books(id, title, author, isbn, cover_image_url)
+        ),
+        borrower:Users!Loans_user_id_fkey(
+          id,
+          email,
+          profile:UserProfile(display_name, student_id)
+        )
+      `,
+    )
+    .not('returned_at', 'is', null)
+    .order('returned_at', { ascending: false });
+
+  const cutoff = getPeriodCutoff(period ?? 'all');
+  if (cutoff) query = query.gte('borrowed_at', cutoff.toISOString());
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows = ((data ?? []) as unknown) as RawCirculationRow[];
+
+  const mapped: CirculationHistoryLoan[] = rows
+    .filter((row) => row.copy?.book != null)
+    .map((row) => {
+      const book = row.copy!.book!;
+      const borrowed = new Date(row.borrowed_at);
+      const returned = new Date(row.returned_at);
+      const loanDurationDays = Math.max(1, Math.round((returned.getTime() - borrowed.getTime()) / (1000 * 60 * 60 * 24)));
+      const profile = row.borrower?.profile;
+      return {
+        id: row.id,
+        borrowedAt: row.borrowed_at,
+        returnedAt: row.returned_at,
+        dueAt: row.due_at,
+        renewedCount: row.renewed_count ?? 0,
+        loanDurationDays,
+        book: {
+          id: book.id,
+          title: book.title,
+          author: book.author ?? null,
+          isbn: book.isbn ?? null,
+          coverImageUrl: book.cover_image_url ?? null,
+        },
+        patron: {
+          id: row.borrower?.id ?? '',
+          name: profile?.display_name ?? null,
+          email: row.borrower?.email ?? null,
+          studentId: profile?.student_id ?? null,
+        },
+      };
+    });
+
+  const sanitized = sanitizeSearchTerm(searchTerm);
+  if (!sanitized) return mapped;
+
+  const lowered = sanitized.toLowerCase();
+  return mapped.filter(
+    (loan) =>
+      loan.book.title.toLowerCase().includes(lowered) ||
+      (loan.book.author?.toLowerCase().includes(lowered) ?? false) ||
+      (loan.patron.name?.toLowerCase().includes(lowered) ?? false) ||
+      (loan.patron.email?.toLowerCase().includes(lowered) ?? false) ||
+      (loan.patron.studentId?.toLowerCase().includes(lowered) ?? false),
+  );
+}
+
+export async function fetchCirculationStats(): Promise<BorrowingStats> {
+  const supabase = getSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from('Loans')
+    .select('borrowed_at, returned_at')
+    .not('returned_at', 'is', null);
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as Array<{ borrowed_at: string; returned_at: string }>;
+  const currentYear = new Date().getFullYear();
+  let totalDays = 0;
+  let thisYearCount = 0;
+
+  for (const row of rows) {
+    const borrowed = new Date(row.borrowed_at);
+    const returned = new Date(row.returned_at);
+    totalDays += Math.max(1, Math.round((returned.getTime() - borrowed.getTime()) / (1000 * 60 * 60 * 24)));
+    if (borrowed.getFullYear() === currentYear) thisYearCount++;
+  }
+
+  return {
+    totalBorrowed: rows.length,
+    thisYearCount,
+    avgLoanDays: rows.length > 0 ? Math.round(totalDays / rows.length) : 0,
+  };
 }
 
 export async function fetchHoldsForBook(bookId: string): Promise<number> {
@@ -1886,3 +2088,138 @@ export async function getNextAvailableBarcodes(count: number): Promise<string[]>
   const { computeNextBarcodes } = await import('@/app/lib/barcode');
   return computeNextBarcodes(existing, count);
 }
+
+export type ManagedUserRow = {
+  id: string;
+  email: string;
+  role: string | null;
+  display_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  profile?: Record<string, unknown> | null;
+};
+
+export async function fetchManagedUsers(): Promise<ManagedUserRow[]> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('Users')
+    .select('*, profile:UserProfile(*)')
+    .order('email');
+  if (error) {
+    console.error('[fetchManagedUsers] error', error);
+    return [];
+  }
+  return (data ?? []) as ManagedUserRow[];
+}
+
+export async function fetchManagedUserById(id: string): Promise<ManagedUserRow | null> {
+  if (!id) return null;
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('Users')
+    .select('*, profile:UserProfile(*)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    console.error('[fetchManagedUserById] error', error);
+    return null;
+  }
+  return (data ?? null) as ManagedUserRow | null;
+}
+
+export type RecentLoanEntry = {
+  id: string;
+  borrowedAt: string;
+  returnedAt: string | null;
+  dueAt: string;
+  renewedCount: number;
+  action: 'borrowed' | 'returned' | 'renewed';
+  book: {
+    id: string;
+    title: string;
+    author: string | null;
+    isbn: string | null;
+    coverImageUrl: string | null;
+  };
+};
+
+type RawRecentLoanRow = {
+  id: string;
+  borrowed_at: string;
+  due_at: string;
+  returned_at: string | null;
+  renewed_count: number | null;
+  copy?: {
+    book?: {
+      id: string;
+      title: string;
+      author: string | null;
+      isbn: string | null;
+      cover_image_url: string | null;
+    } | null;
+  } | null;
+};
+
+export async function fetchRecentLoansByUser(
+  userId: string,
+  maxResults = 5,
+): Promise<RecentLoanEntry[]> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('Loans')
+    .select(
+      `
+        id,
+        borrowed_at,
+        due_at,
+        returned_at,
+        renewed_count,
+        copy:Copies(
+          book:Books(
+            id,
+            title,
+            author,
+            isbn,
+            cover_image_url
+          )
+        )
+      `,
+    )
+    .eq('user_id', userId)
+    .order('borrowed_at', { ascending: false })
+    .limit(maxResults);
+
+  if (error) {
+    console.error('[fetchRecentLoansByUser] error', error);
+    return [];
+  }
+
+  const rows = ((data ?? []) as unknown as RawRecentLoanRow[]).filter(
+    (row) => Boolean(row.copy?.book?.id),
+  );
+
+  return rows.map((row) => {
+    const renewedCount = row.renewed_count ?? 0;
+    const action: RecentLoanEntry['action'] = row.returned_at
+      ? 'returned'
+      : renewedCount > 0
+        ? 'renewed'
+        : 'borrowed';
+    return {
+      id: row.id,
+      borrowedAt: row.borrowed_at,
+      returnedAt: row.returned_at ?? null,
+      dueAt: row.due_at,
+      renewedCount,
+      action,
+      book: {
+        id: row.copy!.book!.id,
+        title: row.copy!.book!.title ?? 'Unknown title',
+        author: row.copy!.book!.author ?? null,
+        isbn: row.copy!.book!.isbn ?? null,
+        coverImageUrl: row.copy!.book!.cover_image_url ?? null,
+      },
+    };
+  });
+}
+

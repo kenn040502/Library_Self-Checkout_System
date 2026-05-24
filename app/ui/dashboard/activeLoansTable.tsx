@@ -47,29 +47,29 @@ export default function ActiveLoansTable({
         <table className="min-w-full">
           <thead className="bg-surface-cream-strong dark:bg-dark-surface-strong">
             <tr className="text-left font-sans text-caption-uppercase text-ink dark:text-on-dark">
-              <th className="px-6 py-3">Borrower</th>
-              <th className="px-6 py-3">Book</th>
-              <th className="px-6 py-3">Due</th>
-              {showActions ? <th className="px-6 py-3 text-right">Return</th> : null}
+              <th className="px-4 py-2">Borrower</th>
+              <th className="px-4 py-2">Book</th>
+              <th className="px-4 py-2">Due</th>
+              {showActions ? <th className="px-4 py-2 text-right">Return</th> : null}
             </tr>
           </thead>
-          <tbody className="font-sans text-body-sm text-body dark:text-on-dark/80">
+          <tbody className="font-sans text-caption text-body dark:text-on-dark/80">
             {loans.map((loan) => {
               const overdue = isOverdue(loan);
 
               return (
                 <tr key={loan.id} className="border-t border-hairline-soft transition hover:bg-surface-cream-strong/50 dark:border-dark-hairline dark:hover:bg-dark-surface-strong/50">
-                  <td className="px-6 py-4">
-                    <div className="font-sans text-title-md text-ink dark:text-on-dark">{loan.borrowerName ?? 'Unknown borrower'}</div>
-                    <p className="font-sans text-caption capitalize text-muted dark:text-on-dark-soft">
+                  <td className="px-4 py-2">
+                    <div className="font-sans text-body-sm text-ink dark:text-on-dark">{loan.borrowerName ?? 'Unknown borrower'}</div>
+                    <p className="font-sans text-caption-uppercase capitalize text-muted dark:text-on-dark-soft">
                       {roleLabel(loan.borrowerRole)} · ID {loan.borrowerIdentifier ?? '—'}
                     </p>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="font-sans text-title-md text-ink dark:text-on-dark">
+                  <td className="px-4 py-2">
+                    <div className="font-sans text-body-sm text-ink dark:text-on-dark">
                       {loan.book?.title ?? 'Untitled'}
                     </div>
-                    <p className="font-mono text-code text-muted dark:text-on-dark-soft">
+                    <p className="font-mono text-caption-uppercase text-muted dark:text-on-dark-soft">
                       {loan.copy?.barcode
                         ? `Barcode ${loan.copy.barcode}`
                         : loan.book?.isbn
@@ -77,9 +77,9 @@ export default function ActiveLoansTable({
                           : '—'}
                     </p>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-2">
                     <span
-                      className={`inline-flex items-center rounded-pill px-3 py-1 font-sans text-caption font-semibold ${
+                      className={`inline-flex items-center rounded-pill px-2 py-0.5 font-sans text-caption-uppercase font-semibold ${
                         overdue
                           ? 'bg-primary text-on-primary'
                           : 'bg-surface-cream-strong text-ink dark:bg-dark-surface-strong dark:text-on-dark'
@@ -89,7 +89,7 @@ export default function ActiveLoansTable({
                     </span>
                   </td>
                   {showActions ? (
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-2 text-right">
                       <QuickCheckInButton
                         loanId={loan.id}
                         bookTitle={loan.book?.title ?? undefined}

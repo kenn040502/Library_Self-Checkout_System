@@ -14,7 +14,10 @@ const protectedPrefixes = [
   '/api/books',
 ];
 
+// Order matters: most specific prefix first. The first matching rule wins.
 const roleGuardRules: Array<{ prefix: string; allowed: Set<DashboardRole> }> = [
+  { prefix: '/dashboard/admin/books', allowed: new Set<DashboardRole>(['staff', 'admin']) },
+  { prefix: '/dashboard/admin/overdue', allowed: new Set<DashboardRole>(['staff', 'admin']) },
   { prefix: '/dashboard/admin', allowed: new Set<DashboardRole>(['admin']) },
   { prefix: '/dashboard/staff', allowed: new Set<DashboardRole>(['staff', 'admin']) },
 ];
@@ -57,11 +60,9 @@ export default auth((request) => {
   const rawRole = sessionUser.role ?? sessionUser.roles?.[0] ?? null;
   const role = resolveRole(rawRole);
 
-  const violatedRule = roleGuardRules.find(
-    ({ prefix, allowed }) => matchesPrefix(pathname, prefix) && !allowed.has(role),
-  );
+  const matchingRule = roleGuardRules.find(({ prefix }) => matchesPrefix(pathname, prefix));
 
-  if (violatedRule) {
+  if (matchingRule && !matchingRule.allowed.has(role)) {
     const fallbackPath = role === 'admin' ? '/dashboard/admin' : '/dashboard';
     return NextResponse.redirect(new URL(fallbackPath, request.url));
   }

@@ -98,7 +98,56 @@ const STOPWORDS = new Set([
   'asking',
   'interest',
   'interested',
+  'give',
+  'gimme',
+  'show',
+  'find',
+  'finding',
+  'need',
+  'needs',
+  'recommend',
+  'recommendation',
+  'recommendations',
+  'suggest',
+  'suggestion',
+  'suggestions',
+  'looking',
+  'look',
+  'get',
+  'got',
+  'some',
+  'any',
+  'good',
+  'best',
+  'great',
+  'nice',
+  'please',
 ]);
+
+const ACRONYM_EXPANSIONS: Record<string, string> = {
+  ai: 'artificial intelligence',
+  ml: 'machine learning',
+  nlp: 'natural language processing',
+  cv: 'computer vision',
+  db: 'database',
+  os: 'operating system',
+  hr: 'human resources',
+  ui: 'user interface',
+  ux: 'user experience',
+  iot: 'internet of things',
+  ar: 'augmented reality',
+  vr: 'virtual reality',
+};
+
+export const expandAcronyms = (tokens: string[]): string[] => {
+  const out: string[] = [];
+  for (const t of tokens) {
+    const expanded = ACRONYM_EXPANSIONS[t.toLowerCase()];
+    if (expanded) out.push(expanded);
+    else out.push(t);
+  }
+  return out;
+};
 
 const AMBIGUOUS_TEXT_TOKENS = new Set(['code', 'coding']);
 const COMPUTING_HINTS = [

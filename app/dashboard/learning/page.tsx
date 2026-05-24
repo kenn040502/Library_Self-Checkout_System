@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function LearningPage() {
-  redirect('/dashboard/learning/linkedin');
+  redirect('/dashboard/learning/youtube');
 }

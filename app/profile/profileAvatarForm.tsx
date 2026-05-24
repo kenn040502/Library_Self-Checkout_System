@@ -40,7 +40,7 @@ export default function ProfileAvatarForm({
   return (
     <div className="group relative flex-none">
       <div className="relative inline-block">
-        <div className="relative h-24 w-24 transition-transform duration-300 group-hover:scale-105 sm:h-32 sm:w-32">
+        <div className="relative h-16 w-16 transition-transform duration-300 group-hover:scale-105 sm:h-20 sm:w-20">
           <img
             src={defaultAvatar}
             alt={`${displayName ?? 'User'} avatar`}
@@ -51,10 +51,11 @@ export default function ProfileAvatarForm({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="absolute bottom-0 right-0 rounded-full bg-primary p-2.5 text-on-primary ring-4 ring-canvas transition-colors hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:bg-dark-primary dark:hover:bg-primary-active dark:ring-dark-canvas dark:focus-visible:ring-offset-dark-canvas"
+          className="absolute bottom-0 right-0 rounded-full bg-primary p-1.5 text-on-primary ring-4 ring-canvas transition-colors hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:bg-dark-primary dark:hover:bg-primary-active dark:ring-dark-canvas dark:focus-visible:ring-offset-dark-canvas"
           aria-label="Change avatar"
+          suppressHydrationWarning
         >
-          <CameraIcon className="h-5 w-5" />
+          <CameraIcon className="h-4 w-4" />
         </button>
       </div>
 

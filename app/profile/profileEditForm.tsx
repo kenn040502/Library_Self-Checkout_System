@@ -27,7 +27,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" aria-disabled={pending} disabled={pending}>
+    <Button type="submit" aria-disabled={pending} disabled={pending} suppressHydrationWarning>
       {pending ? (
         <span className="flex items-center gap-2">
           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
@@ -60,8 +60,8 @@ export default function ProfileEditForm({
   } satisfies ProfileUpdateFormState);
 
   return (
-    <form action={formAction} className="space-y-8">
-      <div className="grid gap-6 sm:grid-cols-2">
+    <form action={formAction} className="space-y-4 sm:space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-5">
         {/* Username */}
         <div>
           <label htmlFor="username" className={labelClass}>
@@ -75,6 +75,7 @@ export default function ProfileEditForm({
             placeholder="Choose a username"
             className={inputClass}
             maxLength={50}
+            suppressHydrationWarning
           />
         </div>
 
@@ -92,6 +93,7 @@ export default function ProfileEditForm({
             className={inputClass}
             maxLength={20}
             pattern="[0-9\s+-]+"
+            suppressHydrationWarning
           />
           <p className="mt-1.5 font-sans text-caption text-muted-soft dark:text-on-dark-soft">
             Format: 012 3456 7890
@@ -111,6 +113,7 @@ export default function ProfileEditForm({
             placeholder="Your preferred language"
             className={inputClass}
             maxLength={50}
+            suppressHydrationWarning
           />
         </div>
 
@@ -127,6 +130,7 @@ export default function ProfileEditForm({
             placeholder="Your faculty"
             className={inputClass}
             maxLength={100}
+            suppressHydrationWarning
           />
         </div>
 
@@ -143,6 +147,7 @@ export default function ProfileEditForm({
             placeholder="Your department"
             className={inputClass}
             maxLength={100}
+            suppressHydrationWarning
           />
         </div>
       </div>
@@ -164,7 +169,7 @@ export default function ProfileEditForm({
       </div>
 
       {/* Submit and Status */}
-      <div className="flex flex-col items-center justify-between gap-4 border-t border-hairline pt-4 sm:flex-row-reverse dark:border-dark-hairline">
+      <div className="flex flex-col items-center justify-between gap-3 border-t border-hairline pt-3 sm:flex-row-reverse dark:border-dark-hairline">
         <SubmitButton />
         {state.status !== 'idle' && (
           <p

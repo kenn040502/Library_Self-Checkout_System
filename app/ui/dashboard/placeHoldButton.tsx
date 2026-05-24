@@ -119,6 +119,7 @@ export default function PlaceHoldButton({ bookId, patronId, bookTitle }: PlaceHo
         type="button"
         onClick={handleClick}
         disabled={loading}
+        suppressHydrationWarning
         className="rounded-btn bg-ink px-3 py-1.5 font-sans text-button text-on-dark transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:bg-on-dark/15 dark:text-on-dark dark:hover:bg-on-dark/25 dark:focus-visible:ring-offset-dark-canvas"
       >
         {loading ? 'Placing…' : 'Place Hold'}

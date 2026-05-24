@@ -39,34 +39,9 @@ export default async function ReturningBooksPage({
           : 'Review which books are currently on loan before speaking with library staff.'}
       >
         <div className="space-y-6">
-          {/* Return hero — solid success per spec §6.4 (drop gradient + boxShadow) */}
-          <div className="relative overflow-hidden rounded-card bg-success p-6 text-on-dark">
-            <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-on-dark/10" />
-            <div className="relative flex items-start gap-5">
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[14px] border border-on-dark/25 bg-on-dark/15">
-                <ArrowPathIcon className="h-7 w-7" strokeWidth={1.8} />
-              </div>
-              <div className="flex-1">
-                <p className="font-sans text-caption-uppercase font-bold opacity-80">
-                  Return Desk · Scan to Complete
-                </p>
-                <h2 className="mt-1 font-display text-display-md font-semibold leading-tight tracking-tight">
-                  {canProcessReturns
-                    ? 'Scan the returned copy barcode'
-                    : 'Drop by the library counter to return'}
-                </h2>
-                <p className="mt-1 font-sans text-body-sm opacity-85">
-                  {canProcessReturns
-                    ? 'Once scanned, the loan is closed and the copy is returned to the shelf.'
-                    : 'Staff will confirm the return on the spot — no form needed.'}
-                </p>
-              </div>
-            </div>
-          </div>
-
           <div className="flex flex-wrap items-center gap-3">
             <SearchForm
-              action="/dashboard/book"
+              action="/dashboard/book/checkin"
               placeholder="Search borrowed books by borrower, ID, or title"
               defaultValue={searchTerm}
               aria-label="Search borrowed books"
@@ -142,19 +117,6 @@ export default async function ReturningBooksPage({
                 );
               })()}
 
-              <div className="flex gap-4 rounded-card border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card p-5">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-surface-cream-strong dark:bg-dark-surface-strong text-ink dark:text-on-dark">
-                  <MapPinIcon className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="font-display text-title-lg font-semibold tracking-tight text-ink dark:text-on-dark">
-                    Bring your book to the library counter
-                  </p>
-                  <p className="mt-1 font-sans text-body-sm text-muted dark:text-on-dark-soft">
-                    Staff will process your return — no form needed. Just hand over the book and you&apos;re done.
-                  </p>
-                </div>
-              </div>
             </>
           )}
 

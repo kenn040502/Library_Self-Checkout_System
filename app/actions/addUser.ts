@@ -1,6 +1,7 @@
 'use server';
 
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
+import { getDashboardSession } from '@/app/lib/auth/session';
 
 const normalizeRole = (value: string): 'user' | 'staff' | 'admin' => {
   const normalized = value.trim().toLowerCase();
@@ -17,6 +18,11 @@ type AddUserPayload = {
 
 export async function addUserAction(formData: AddUserPayload) {
   try {
+    const { user: callerUser } = await getDashboardSession();
+    if (!callerUser || callerUser.role !== 'admin') {
+      return { success: false, error: 'Admins only.' };
+    }
+
     const email = formData.email?.trim().toLowerCase();
     if (!email) {
       return { success: false, error: 'Email is required.' };

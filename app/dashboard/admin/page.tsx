@@ -12,7 +12,7 @@ export default async function AdminDashboardPage() {
   const { user } = await getDashboardSession();
 
   if (!user) redirect('/login');
-  if (user.role !== 'staff' && user.role !== 'admin') redirect('/dashboard');
+  if (user.role !== 'admin') redirect('/dashboard');
 
   const [summary, recentLoans, chartData, topBooks] = await Promise.all([
     fetchDashboardSummary(),

@@ -199,36 +199,9 @@ export default function MobileMenu({ user }: { user: DashboardUserProfile }) {
           >
             <XMarkIcon className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-muted dark:text-on-dark-soft">
-            Navigation
-          </p>
         </div>
 
         {/* Role badge card */}
-        <div
-          className={clsx(
-            'm-3.5 rounded-btn border p-3',
-            badge.cardClass,
-          )}
-        >
-          <p
-            className={clsx(
-              'font-mono text-[9px] font-bold uppercase tracking-[2px]',
-              badge.textClass,
-            )}
-          >
-            {badge.label}
-          </p>
-          <p className="mt-0.5 font-sans text-[13px] font-semibold text-ink dark:text-on-dark">
-            {displayName}
-          </p>
-        </div>
-
-        {/* Workspace label */}
-        <p className="mx-[22px] mb-2 mt-1 font-mono text-[9px] font-semibold uppercase tracking-[1.8px] text-muted dark:text-on-dark-soft">
-          Workspace
-        </p>
-
         {/* Items */}
         <nav className="flex-1 overflow-y-auto px-3 pb-2">
           {items.map((item) => {
@@ -313,6 +286,7 @@ export default function MobileMenu({ user }: { user: DashboardUserProfile }) {
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={isOpen}
         aria-controls="mobile-menu-drawer"
+        suppressHydrationWarning
       >
         {isOpen ? (
           <XMarkIcon className="h-6 w-6" aria-hidden="true" />

@@ -6,24 +6,24 @@ description: A warm-canvas editorial interface for Anthropic's Claude product. T
 colors:
   primary: "#cc785c"
   primary-active: "#a9583e"
-  primary-disabled: "#e6dfd8"
-  ink: "#141413"
-  body: "#3d3d3a"
-  body-strong: "#252523"
-  muted: "#6c6a64"
-  muted-soft: "#8e8b82"
-  hairline: "#e6dfd8"
-  hairline-soft: "#ebe6df"
-  canvas: "#faf9f5"
-  surface-soft: "#f5f0e8"
-  surface-card: "#efe9de"
-  surface-cream-strong: "#e8e0d2"
-  surface-dark: "#181715"
-  surface-dark-elevated: "#252320"
-  surface-dark-soft: "#1f1e1b"
+  primary-disabled: "#e2e2e7"
+  ink: "#18181b"
+  body: "#3f3f46"
+  body-strong: "#27272a"
+  muted: "#71717a"
+  muted-soft: "#a1a1aa"
+  hairline: "#e2e2e2"
+  hairline-soft: "#ebebeb"
+  canvas: "#fafafa"
+  surface-soft: "#f5f5f6"
+  surface-card: "#ededed"
+  surface-cream-strong: "#e5e5e5"
+  surface-dark: "#18181b"
+  surface-dark-elevated: "#27272a"
+  surface-dark-soft: "#1f1f23"
   on-primary: "#ffffff"
-  on-dark: "#faf9f5"
-  on-dark-soft: "#a09d96"
+  on-dark: "#fafafa"
+  on-dark-soft: "#a1a1aa"
   accent-teal: "#5db8a6"
   accent-amber: "#e8a55a"
   success: "#5db872"
@@ -300,23 +300,23 @@ components:
 
 ## Overview
 
-Claude.com is the warmest, most editorial interface in the AI-product category. The base atmosphere is a **tinted cream canvas** (`{colors.canvas}` — #faf9f5) — distinctly warm, deliberately not the cool gray-white that every other AI brand uses. Headlines run a **slab-serif display** ("Copernicus" / Tiempos Headline) at weight 400 with negative letter-spacing, paired with **StyreneB / Inter** body sans. The combination feels like a literary publication, not a SaaS marketing page.
+The interface uses a neutral white/grey canvas with serif display headlines, coral CTAs, and dark grey product surfaces. The light mode is clean and minimal — white canvas with light grey card surfaces, no warm tint. Headlines run a **slab-serif display** ("Copernicus" / Tiempos Headline) at weight 400 with negative letter-spacing, paired with **StyreneB / Inter** body sans.
 
-Brand voltage comes from the **cream + coral pairing** — coral (`{colors.primary}` — #cc785c) is the signature Anthropic accent, used on every primary CTA, on the brand wordmark, and on full-bleed callout cards. The coral is warm, slightly muted, never cyan/blue — a deliberate counter-positioning against OpenAI's cool slate, Google's saturated blue, and Microsoft's corporate cyan.
+Brand voltage comes from the **white + coral pairing** — coral (`{colors.primary}` — #cc785c) is the signature accent, used on every primary CTA, on the brand wordmark, and on full-bleed callout cards.
 
 The system has three surface modes that alternate page-by-page:
-1. **Cream canvas** (`{colors.canvas}`) — default body floor
-2. **Light cream cards** (`{colors.surface-card}`) — feature card backgrounds
-3. **Dark navy product surfaces** (`{colors.surface-dark}`) — code editor mockups, model showcase cards, pre-footer CTAs, footer itself
+1. **White canvas** (`{colors.canvas}`) — default body floor
+2. **Light grey cards** (`{colors.surface-card}`) — feature card backgrounds
+3. **Dark grey product surfaces** (`{colors.surface-dark}`) — code editor mockups, model showcase cards, pre-footer CTAs, footer itself
 
-The dark surfaces are where Claude shows its product chrome — code blocks, terminal output, model comparison tables, agentic-flow diagrams. The cream-to-dark contrast is the page's pacing rhythm.
+The dark surfaces are where the product chrome lives — code blocks, terminal output, model comparison tables.
 
 **Key Characteristics:**
-- Warm cream canvas (`{colors.canvas}` — #faf9f5) with dark warm-ink text (`{colors.ink}` — #141413). The brand's defining color choice.
+- Neutral white canvas (`{colors.canvas}` — #fafafa) with dark zinc-ink text (`{colors.ink}` — #18181b).
 - Coral primary CTA (`{colors.primary}` — #cc785c). Used scarcely on individual buttons, generously on full-bleed coral callout cards.
 - Slab-serif display headlines via Copernicus / Tiempos Headline at weight 400 with negative letter-spacing. Pairs with humanist sans body for a literary editorial voice.
-- Dark navy product mockup cards (`{colors.surface-dark}` — #181715) carrying code blocks, terminal panels, model comparison data — the brand shows the product chrome at scale rather than abstract marketing illustrations.
-- Light cream feature cards (`{colors.surface-card}` — #efe9de) — slightly darker than canvas, used for content-driven feature explanations.
+- Dark grey product mockup cards (`{colors.surface-dark}` — #18181b) carrying code blocks, terminal panels, model comparison data.
+- Light grey feature cards (`{colors.surface-card}` — #ededed) — slightly darker than canvas, used for content-driven feature explanations.
 - Anthropic radial-spike mark — a small black asterisk-like glyph (4-spoke radial) — appears as the brand wordmark prefix and as a content marker.
 - Border radius is hierarchical: `{rounded.md}` (8px) for buttons + inputs, `{rounded.lg}` (12px) for content + product cards, `{rounded.xl}` (16px) for the hero illustration container, `{rounded.pill}` for badges.
 - Section rhythm `{spacing.section}` (96px) — modern-SaaS standard. Internal card padding stays generous at `{spacing.xl}` (32px).
@@ -326,30 +326,30 @@ The dark surfaces are where Claude shows its product chrome — code blocks, ter
 ### Brand & Accent
 - **Coral / Primary** (`{colors.primary}` — #cc785c): The signature Anthropic warm coral. Used on every primary CTA background, on full-bleed coral callout cards, on the brand wordmark accent. The most-recognized Anthropic color outside of the spike-mark logo.
 - **Coral Active** (`{colors.primary-active}` — #a9583e): The press / hover-darker variant.
-- **Coral Disabled** (`{colors.primary-disabled}` — #e6dfd8): A desaturated cream-tinted disabled state.
+- **Coral Disabled** (`{colors.primary-disabled}` — #e2e2e7): A neutral grey disabled state.
 - **Accent Teal** (`{colors.accent-teal}` — #5db8a6): Used sparingly on secondary product surfaces (terminal status indicators, "active connection" dots in connectors page).
 - **Accent Amber** (`{colors.accent-amber}` — #e8a55a): A small companion warm-tone used on category badges and inline highlights.
 
 ### Surface
-- **Canvas** (`{colors.canvas}` — #faf9f5): The default page floor. Tinted cream — warm, deliberately not pure white.
-- **Surface Soft** (`{colors.surface-soft}` — #f5f0e8): Section dividers, very-soft band backgrounds.
-- **Surface Card** (`{colors.surface-card}` — #efe9de): Feature cards, content cards. One step darker than canvas.
-- **Surface Cream Strong** (`{colors.surface-cream-strong}` — #e8e0d2): A strongest-cream variant used on selected category tabs and emphasized section bands.
-- **Surface Dark** (`{colors.surface-dark}` — #181715): Code editor mockups, model showcase cards, footer. The dominant dark surface.
-- **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #252320): Elevated cards inside dark bands (settings panels in mockups).
-- **Surface Dark Soft** (`{colors.surface-dark-soft}` — #1f1e1b): Slightly lighter dark, used for code block backgrounds inside larger dark cards.
-- **Hairline** (`{colors.hairline}` — #e6dfd8): The 1px border tone on cream surfaces. Same hex as `{colors.primary-disabled}` — borders feel like one elevation step rather than ink lines.
-- **Hairline Soft** (`{colors.hairline-soft}` — #ebe6df): Barely-visible divider used inside the same band.
+- **Canvas** (`{colors.canvas}` — #fafafa): The default page floor. Neutral off-white, no warm tint.
+- **Surface Soft** (`{colors.surface-soft}` — #f5f5f6): Section dividers, very-soft band backgrounds.
+- **Surface Card** (`{colors.surface-card}` — #ededed): Feature cards, content cards. Light grey, one step darker than canvas.
+- **Surface Strong** (`{colors.surface-cream-strong}` — #e5e5e5): Strongest light surface, used on selected category tabs and emphasized section bands.
+- **Surface Dark** (`{colors.surface-dark}` — #18181b): Code editor mockups, model showcase cards, footer. The dominant dark surface.
+- **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #27272a): Elevated cards inside dark bands (settings panels in mockups).
+- **Surface Dark Soft** (`{colors.surface-dark-soft}` — #1f1f23): Slightly lighter dark, used for code block backgrounds inside larger dark cards.
+- **Hairline** (`{colors.hairline}` — #e2e2e2): The 1px border tone on light surfaces.
+- **Hairline Soft** (`{colors.hairline-soft}` — #ebebeb): Barely-visible divider used inside the same band.
 
 ### Text
-- **Ink** (`{colors.ink}` — #141413): All headlines and primary text. Warm dark, slightly off-pure-black.
-- **Body Strong** (`{colors.body-strong}` — #252523): Emphasized paragraphs, lead text.
-- **Body** (`{colors.body}` — #3d3d3a): Default running-text color.
-- **Muted** (`{colors.muted}` — #6c6a64): Sub-headings, breadcrumbs, footer-adjacent secondary text.
-- **Muted Soft** (`{colors.muted-soft}` — #8e8b82): Captions, fine-print, copyright lines.
+- **Ink** (`{colors.ink}` — #18181b): All headlines and primary text. Zinc-900, near-black.
+- **Body Strong** (`{colors.body-strong}` — #27272a): Emphasized paragraphs, lead text.
+- **Body** (`{colors.body}` — #3f3f46): Default running-text color.
+- **Muted** (`{colors.muted}` — #71717a): Sub-headings, breadcrumbs, secondary text.
+- **Muted Soft** (`{colors.muted-soft}` — #a1a1aa): Captions, fine-print, copyright lines.
 - **On Primary** (`{colors.on-primary}` — #ffffff): Text on coral buttons.
-- **On Dark** (`{colors.on-dark}` — #faf9f5): Cream-tinted white used on dark surfaces (echoes the canvas tone).
-- **On Dark Soft** (`{colors.on-dark-soft}` — #a09d96): Footer body text, secondary labels in dark mockups.
+- **On Dark** (`{colors.on-dark}` — #fafafa): Neutral white used on dark surfaces.
+- **On Dark Soft** (`{colors.on-dark-soft}` — #a1a1aa): Footer body text, secondary labels in dark mockups.
 
 ### Semantic
 - **Success** (`{colors.success}` — #5db872): Green status dots, "available" indicators.
@@ -478,7 +478,7 @@ When photography is used (rare — mostly testimonials), avatars crop to perfect
 
 **`hero-illustration-card`** — A larger card holding the hero's right-side artifact — sometimes a coral-stroke line illustration on cream background, sometimes a dark code editor mockup. Background `{colors.canvas}` or `{colors.surface-dark}` depending on context, rounded `{rounded.xl}` (16px).
 
-**`feature-card`** — Used in 3-up feature grids. Background `{colors.surface-card}` (#efe9de — slightly darker cream), rounded `{rounded.lg}` (12px), internal padding `{spacing.xl}` (32px). Carries a small icon at top, an `{typography.title-md}` headline, and a body description in `{typography.body-md}`.
+**`feature-card`** — Used in 3-up feature grids. Background `{colors.surface-card}` (#ededed — light grey), rounded `{rounded.lg}` (12px), internal padding `{spacing.xl}` (32px). Carries a small icon at top, an `{typography.title-md}` headline, and a body description in `{typography.body-md}`.
 
 **`product-mockup-card-dark`** — Dark navy card showing actual Claude product chrome (chat interface, code editor, agent controls). Background `{colors.surface-dark}`, rounded `{rounded.lg}`, internal padding `{spacing.xl}` (32px). Carries text labels in `{colors.on-dark}` and product UI fragments below.
 

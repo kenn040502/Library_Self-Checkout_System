@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getDashboardSession } from '@/app/lib/auth/session';
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
 import { findBookByIsbn, getNextAvailableBarcodes } from '@/app/lib/supabase/queries';
+import { validateImageUrl } from '@/app/lib/validators/imageUrl';
 
 export type LookupIsbnResult =
   | { ok: true; existing: { id: string; title: string; author: string | null; copyCount: number } | null }
@@ -11,7 +12,7 @@ export type LookupIsbnResult =
 
 export async function lookupIsbnInDb(isbn: string): Promise<LookupIsbnResult> {
   const { user } = await getDashboardSession();
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
     return { ok: false, message: 'Not allowed.' };
   }
   try {
@@ -41,8 +42,13 @@ export type CreateBookResult =
 
 export async function createBookWithCopies(input: CreateBookInput): Promise<CreateBookResult> {
   const { user } = await getDashboardSession();
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
     return { ok: false, message: 'Not allowed.' };
+  }
+
+  const isbn = (input.isbn ?? '').trim();
+  if (!isbn) {
+    return { ok: false, message: 'ISBN is required.', field: 'isbn' };
   }
 
   const title = input.title?.trim();
@@ -53,12 +59,17 @@ export async function createBookWithCopies(input: CreateBookInput): Promise<Crea
     return { ok: false, message: 'Copies must be between 1 and 20.', field: 'copies' };
   }
 
+  const coverCheck = validateImageUrl(input.coverImageUrl);
+  if (!coverCheck.ok) {
+    return { ok: false, message: coverCheck.error, field: 'coverImageUrl' };
+  }
+
   const supabase = getSupabaseServerClient();
 
   const bookPayload = {
     title,
     author,
-    isbn: input.isbn?.trim() || null,
+    isbn,
     publisher: input.publisher?.trim() || null,
     publication_year: input.publicationYear?.trim() || null,
     classification: input.classification?.trim() || null,
@@ -116,4 +127,76 @@ export async function createBookWithCopies(input: CreateBookInput): Promise<Crea
   revalidatePath('/dashboard/admin/books/new');
   revalidatePath('/dashboard/book/items');
   return { ok: true, bookId: bookRow.id, barcodes };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Update an existing book (admin only). Mirrors createBookWithCopies' style:
+// returns a discriminated `{ ok }` result rather than ActionState, since that
+// is what the form/UI already consumes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type UpdateBookInput = {
+  id: string;
+  title: string;
+  author: string;
+  isbn?: string;
+  publisher?: string;
+  publicationYear?: string;
+  classification?: string;
+  coverImageUrl?: string;
+  category?: string;
+};
+
+export type UpdateBookResult =
+  | { ok: true; bookId: string }
+  | { ok: false; message: string; field?: string };
+
+export async function updateBookAction(input: UpdateBookInput): Promise<UpdateBookResult> {
+  const { user } = await getDashboardSession();
+  if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+    return { ok: false, message: 'Not allowed.' };
+  }
+
+  const isbn = (input.isbn ?? '').trim();
+  if (!isbn) {
+    return { ok: false, message: 'ISBN is required.', field: 'isbn' };
+  }
+
+  if (!input.id) return { ok: false, message: 'Book id is required.', field: 'id' };
+
+  const title = input.title?.trim();
+  const author = input.author?.trim();
+  if (!title) return { ok: false, message: 'Title is required.', field: 'title' };
+  if (!author) return { ok: false, message: 'Author is required.', field: 'author' };
+
+  const coverCheck = validateImageUrl(input.coverImageUrl);
+  if (!coverCheck.ok) {
+    return { ok: false, message: coverCheck.error, field: 'coverImageUrl' };
+  }
+
+  const supabase = getSupabaseServerClient();
+
+  const updatePayload = {
+    title,
+    author,
+    isbn,
+    publisher: input.publisher?.trim() || null,
+    publication_year: input.publicationYear?.trim() || null,
+    classification: input.classification?.trim() || null,
+    cover_image_url: input.coverImageUrl?.trim() || null,
+    category: input.category || null,
+  };
+
+  const { error } = await supabase.from('Books').update(updatePayload).eq('id', input.id);
+
+  if (error) {
+    console.error('[updateBookAction] update failed', error);
+    return { ok: false, message: error.message ?? 'Could not update book.' };
+  }
+
+  revalidatePath('/dashboard/book/items');
+  revalidatePath(`/dashboard/book/${input.id}`);
+  revalidatePath(`/dashboard/admin/books/${input.id}/edit`);
+
+  return { ok: true, bookId: input.id };
 }
