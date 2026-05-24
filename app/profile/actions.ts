@@ -183,8 +183,11 @@ export async function updateProfileAction(
 
     const phoneNumber = formData.get('phone')?.toString().trim();
 
+    // NOTE: display_name is intentionally NOT included here. It is owned by the
+    // Identity form (updateProfileNamesAction). If we read it from formData
+    // here it would always be null (this form has no display_name input) and
+    // wipe out the Identity card's value on every save.
     const updateData = {
-      display_name: formData.get('display_name')?.toString().trim() || null,
       username: formData.get('username')?.toString().trim() || null,
       phone: phoneNumber || null,
       preferred_language: formData.get('preferred_language')?.toString().trim() || null,

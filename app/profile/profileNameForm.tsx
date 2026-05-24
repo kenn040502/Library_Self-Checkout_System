@@ -63,7 +63,7 @@ export default function ProfileNameForm({
         {state.status !== 'idle' && (
           <p
             className={clsx(
-              'absolute -bottom-5 left-0 font-sans text-caption font-medium',
+              'absolute -top-5 left-0 font-sans text-caption font-medium',
               state.status === 'success' ? 'text-success' : 'text-error',
             )}
           >
