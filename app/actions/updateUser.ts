@@ -53,6 +53,40 @@ export async function updateUserAction(updateData: UpdateUserInput) {
         typeof userUpdates.role === 'string' ? userUpdates.role : undefined,
       );
       if (normalizedRole) {
+        // Safety gate: if we are demoting an admin (changing from 'admin' to
+        // something else), make sure at least one other admin will remain.
+        if (normalizedRole !== 'admin') {
+          const { data: target, error: lookupError } = await supabase
+            .from('Users')
+            .select('role')
+            .eq('id', updateData.id)
+            .maybeSingle<{ role: string | null }>();
+
+          if (lookupError) {
+            console.error('Failed to look up user role before update', lookupError);
+            return { success: false, error: lookupError.message };
+          }
+
+          if (target?.role === 'admin') {
+            const { count, error: countError } = await supabase
+              .from('Users')
+              .select('id', { head: true, count: 'exact' })
+              .eq('role', 'admin');
+
+            if (countError) {
+              console.error('Failed to count admins', countError);
+              return { success: false, error: countError.message };
+            }
+
+            if ((count ?? 0) <= 1) {
+              return {
+                success: false,
+                error:
+                  'Cannot change the role of the only remaining admin. At least one admin must exist at all times.',
+              };
+            }
+          }
+        }
         userPayload.role = normalizedRole;
       }
     }

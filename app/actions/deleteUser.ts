@@ -16,6 +16,28 @@ export async function deleteUserAction(id: string) {
 
     const supabase = getSupabaseServerClient();
 
+    // Safety gate: refuse to delete an admin account directly. The role must
+    // be changed to user/staff first, and only the last admin demotion is
+    // additionally blocked elsewhere (updateUserAction).
+    const { data: target, error: lookupError } = await supabase
+      .from('Users')
+      .select('role')
+      .eq('id', id)
+      .maybeSingle<{ role: string | null }>();
+
+    if (lookupError) {
+      console.error('Failed to look up user role before delete', lookupError);
+      return { success: false, error: lookupError.message };
+    }
+
+    if (target?.role === 'admin') {
+      return {
+        success: false,
+        error:
+          'Admin accounts cannot be deleted directly. Change this user to "user" or "staff" first, then delete.',
+      };
+    }
+
     const { error: profileError } = await supabase.from('UserProfile').delete().eq('user_id', id);
     if (profileError) {
       console.error('Failed to remove user profile', profileError);
