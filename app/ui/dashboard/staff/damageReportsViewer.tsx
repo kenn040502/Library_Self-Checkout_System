@@ -215,12 +215,25 @@ export default function DamageReportsViewer({ reports, signedUrls, initialFilter
                     <td className="px-3 py-2 align-top font-mono text-[12px] text-muted dark:text-on-dark-soft">
                       {r.copy?.barcode ?? '—'}
                     </td>
+
                     <td className="px-3 py-2 align-top font-sans text-[13px] text-ink dark:text-on-dark">
-                      {r.borrower?.displayName ?? r.borrower?.email ?? '—'}
+                      <p
+                        className="max-w-[180px] truncate"
+                        title={r.borrower?.displayName ?? r.borrower?.email ?? '—'}
+                      >
+                        {r.borrower?.displayName ?? r.borrower?.email ?? '—'}
+                      </p>
                     </td>
+
                     <td className="px-3 py-2 align-top font-sans text-[13px] text-muted dark:text-on-dark-soft">
-                      {r.reportedBy?.displayName ?? r.reportedBy?.email ?? '—'}
+                      <p
+                        className="max-w-[180px] truncate"
+                        title={r.reportedBy?.displayName ?? r.reportedBy?.email ?? '—'}
+                      >
+                        {r.reportedBy?.displayName ?? r.reportedBy?.email ?? '—'}
+                      </p>
                     </td>
+                    
                     <td className="px-3 py-2 align-top">
                       {r.photoPaths.length > 0 ? (
                         <span className="inline-flex items-center gap-1 rounded-pill bg-surface-cream-strong px-2 py-0.5 font-mono text-[11px] text-muted dark:bg-dark-surface-strong dark:text-on-dark-soft">

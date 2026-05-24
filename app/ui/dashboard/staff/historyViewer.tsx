@@ -22,8 +22,11 @@ type Props = {
     bookQ?: string;
     handlerQ?: string;
     page: number;
+    pageSize: number;
   };
 };
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 
 const STATUS_LABEL: Record<string, string> = {
   borrowed: 'Active',
@@ -59,6 +62,13 @@ export default function HistoryViewer({ result, initialFilters }: Props) {
   const goToPage = (n: number) => {
     const next = new URLSearchParams(params.toString());
     next.set('page', String(n));
+    router.push(`${pathname}?${next.toString()}`);
+  };
+
+  const setPageSize = (size: number) => {
+    const next = new URLSearchParams(params.toString());
+    next.set('pageSize', String(size));
+    next.delete('page'); // reset to first page so we don't land past the new last page
     router.push(`${pathname}?${next.toString()}`);
   };
 
@@ -148,19 +158,45 @@ export default function HistoryViewer({ result, initialFilters }: Props) {
           Showing {result.rows.length} of {result.total} loans · {result.active} active ·{' '}
           {result.returned} returned · {result.overdue} overdue
         </p>
-        <a
-          href={exportHref}
-          download
-          className="inline-flex h-10 items-center rounded-btn border border-hairline bg-surface-card px-4 font-sans text-body-sm font-medium text-ink transition hover:bg-surface-cream-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong dark:focus-visible:ring-offset-dark-canvas"
-        >
-          Export CSV
-        </a>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">
+            Rows
+            <select
+              value={initialFilters.pageSize}
+              onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+              className="h-10 rounded-btn border border-hairline bg-surface-card px-3 font-sans text-body-sm text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+          <a
+            href={exportHref}
+            download
+            className="inline-flex h-10 items-center rounded-btn border border-hairline bg-surface-card px-4 font-sans text-body-sm font-medium text-ink transition hover:bg-surface-cream-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong dark:focus-visible:ring-offset-dark-canvas"
+          >
+            Export CSV
+          </a>
+        </div>
       </div>
 
       {/* Table */}
       <div className="overflow-hidden rounded-card border border-hairline bg-surface-card dark:border-dark-hairline dark:bg-dark-surface-card">
         <div className="overflow-x-auto">
-          <table className="min-w-full">
+          <table className="w-full min-w-[1180px] table-fixed">
+            <colgroup>
+              <col style={{ width: '24%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '17%' }} />
+            </colgroup>
             <thead>
               <tr className="bg-surface-cream-strong dark:bg-dark-surface-strong">
                 {['Book', 'Borrower', 'Borrowed', 'Due', 'Returned', 'Duration', 'Status', 'Handler'].map(
@@ -223,16 +259,16 @@ export default function HistoryViewer({ result, initialFilters }: Props) {
                         {r.borrower?.studentId ?? ''}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">
+                    <td className="whitespace-nowrap px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">
                       {new Date(r.borrowedAt).toLocaleDateString('en-MY')}
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">
+                    <td className="whitespace-nowrap px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">
                       {new Date(r.dueAt).toLocaleDateString('en-MY')}
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">
+                    <td className="whitespace-nowrap px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">
                       {r.returnedAt ? new Date(r.returnedAt).toLocaleDateString('en-MY') : '—'}
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">{r.durationDays}d</td>
+                    <td className="whitespace-nowrap px-4 py-3.5 font-mono text-code text-muted dark:text-on-dark-soft">{r.durationDays}d</td>
                     <td className="px-4 py-3.5">
                       <Chip mono tone={STATUS_TONE[r.status]}>
                         {STATUS_LABEL[r.status]}

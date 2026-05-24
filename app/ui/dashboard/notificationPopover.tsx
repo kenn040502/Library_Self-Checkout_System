@@ -128,7 +128,7 @@ export default function NotificationPopover({ hasUnread, onAllRead }: Props) {
       {/* Panel */}
       {open && (
         <div
-          className="fixed right-4 top-[57px] z-50 w-72 rounded-card border border-hairline bg-surface-card shadow-[0_4px_24px_rgba(20,20,19,0.12)] dark:border-dark-hairline dark:bg-dark-surface-card md:hidden"
+          className="fixed right-4 top-[57px] z-50 w-72 rounded-card border border-hairline bg-white shadow-[0_4px_24px_rgba(20,20,19,0.12)] dark:border-dark-hairline dark:bg-dark-surface-card md:hidden"
           style={{ animation: 'notifPanelIn 0.25s cubic-bezier(0.16,1,0.3,1) both' }}
         >
           <style>{`

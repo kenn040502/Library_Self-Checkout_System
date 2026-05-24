@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import clsx from 'clsx';
 import { useRouter } from 'next/navigation';
 import PlaceHoldButton from './placeHoldButton';
 import ManageCopiesModal from './manageCopiesModal';
@@ -12,6 +11,7 @@ import { Pagination } from '@/app/ui/dashboard/pagination';
 import BookCover, { getBookGradient } from '@/app/ui/dashboard/primitives/BookCover';
 import BlurFade from '@/app/ui/magicUi/blurFade';
 import type { CategoryKey } from '@/app/ui/dashboard/bookCategories';
+import clsx from 'clsx';
 
 // ---- Category filter ----
 // Screenshot categories: All / Computing / Design / Psychology / Self-help / History
@@ -205,37 +205,46 @@ function AvailabilityChip({
   available,
   total,
   status,
+  variant = 'grid',
 }: {
   available: number | null | undefined;
   total: number | null | undefined;
   status: ItemStatus;
+  variant?: 'grid' | 'list';
 }) {
   const avail = available ?? 0;
   const tot = total ?? 0;
+
+  // Same color logic for both variants, so define className here to avoid duplication
+  const statusClassName = clsx(
+    "inline-flex rounded-pill px-2.5 py-0.5 text-[12px] font-semibold justify-center",
+    variant === 'grid' ? "w-full" : "w-auto"
+  );
+
   if (tot === 0) {
     return (
-      <span className="inline-flex rounded-pill bg-surface-cream-strong dark:bg-dark-surface-strong px-2.5 py-0.5 text-[11px] font-semibold text-muted dark:text-on-dark-soft">
+      <span className={clsx(statusClassName + " bg-surface-cream-strong dark:bg-dark-surface-strong text-muted dark:text-on-dark-soft")} >
         No copies
       </span>
     );
   }
   if (avail > 0) {
     return (
-      <span className="inline-flex rounded-pill bg-success/15 px-2.5 py-0.5 text-[11px] font-semibold text-success">
-        {avail} avail.
+      <span className={clsx(statusClassName + " bg-success/15 text-success")} >
+        {avail} available
       </span>
     );
   }
   // No copies free — show On loan (primary) per design
   if (status === 'on_hold') {
     return (
-      <span className="inline-flex rounded-pill bg-accent-amber/15 px-2.5 py-0.5 text-[11px] font-semibold text-accent-amber">
+      <span className={clsx(statusClassName + " bg-accent-amber/15 text-accent-amber")} >
         On hold
       </span>
     );
   }
   return (
-    <span className="inline-flex rounded-pill bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary dark:bg-dark-primary/15 dark:text-dark-primary">
+    <span className={clsx(statusClassName + " bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary")} >
       On loan
     </span>
   );
@@ -390,44 +399,53 @@ export default function BookList({
                     <p className="mt-0.5 truncate font-display text-[12px] italic text-muted-soft dark:text-on-dark-soft">
                       {b.author ? highlightMatch(b.author, searchQuery) : 'Unknown author'}
                     </p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <AvailabilityChip
-                        available={b.copies_available}
-                        total={b.total_copies}
-                        status={status}
-                      />
-                      {!canBorrow && !noCopies && (
-                        <PlaceHoldButton bookId={b.id} patronId={patronId} bookTitle={b.title} />
-                      )}
+                    
+                    <div className="mt-2 flex flex-col items-start gap-2 sm:items-center">
+                      {/* status row */}
+                      <div className='w-full'>
+                        <AvailabilityChip
+                          available={b.copies_available}
+                          total={b.total_copies}
+                          status={status}
+                          variant={'grid'}
+                        />
+                      </div>
+                      
+                      {/* buttons row */}
+                      <div className="flex w-full gap-2 ">
+                        {!canBorrow && !noCopies && (
+                          <PlaceHoldButton bookId={b.id} patronId={patronId} bookTitle={b.title} />
+                        )}
+                      </div>
+
                       {isStaff && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(b)}
-                            suppressHydrationWarning
-                            className="rounded-pill border border-primary/30 px-2.5 py-0.5 text-[10px] font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/10 dark:focus-visible:ring-offset-dark-canvas"
-                          >
+                        <div className="flex w-full gap-2 sm:items-center">
+                        {canEdit && (
+                          <Link
+                            href={`/dashboard/admin/books/${b.id}/edit`}
+                            title="Edit book"
+                            className="
+                                flex-1 rounded-pill border border-primary/30
+                                px-4 py-2 text-[12px] text-center
+                                font-semibold text-primary transition
+                                hover:bg-primary/10
+                              ">
                             Edit
-                          </button>
+                          </Link>)}
                           <button
                             type="button"
                             onClick={() => setManagingBookId(b.id)}
                             title="Manage copies"
                             suppressHydrationWarning
-                            className="rounded-pill border border-hairline dark:border-dark-hairline px-2.5 py-0.5 text-[10px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-                          >
+                            className="
+                              flex-1 rounded-pill border border-hairline dark:border-dark-hairline
+                              px-4 py-2 text-[12px]
+                              font-semibold text-muted dark:text-on-dark-soft transition
+                              hover:border-primary/30 hover:text-ink dark:hover:text-on-dark
+                            ">
                             Copies
                           </button>
                         </div>
-                      )}
-                      {canEdit && (
-                        <Link
-                          href={`/dashboard/admin/books/${b.id}/edit`}
-                          title="Edit book"
-                          className="rounded-pill border border-hairline dark:border-dark-hairline px-2.5 py-0.5 text-[10px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-primary dark:hover:text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-                        >
-                          Edit
-                        </Link>
                       )}
                     </div>
                   </div>
@@ -473,7 +491,7 @@ export default function BookList({
 
             return (
               <BlurFade key={b.id} delay={0.15 + idx * 0.03} yOffset={8}>
-                <li className="flex items-center gap-4 px-4 py-3 transition hover:bg-surface-soft dark:hover:bg-dark-surface-soft">
+                <li className="flex flex-col gap-3 px-4 py-3 transition hover:bg-surface-soft dark:hover:bg-dark-surface-soft sm:flex-row sm:items-center">
                   <Link
                     href={`/dashboard/book/${b.id}`}
                     aria-label={`View details for ${b.title}`}
@@ -499,49 +517,73 @@ export default function BookList({
                       </p>
                     </div>
                   </Link>
-                  <AvailabilityChip
-                    available={b.copies_available}
-                    total={b.total_copies}
-                    status={status}
-                  />
-                  <div className="flex items-center gap-2">
-                    {!canBorrow && !noCopies && (
-                      <PlaceHoldButton bookId={b.id} patronId={patronId} bookTitle={b.title} />
-                    )}
-                    {canBorrow && (
-                      <Link
-                        href={`/dashboard/book/checkout?bookId=${b.id}`}
-                        className="rounded-pill bg-primary hover:bg-primary-active px-3 py-1 text-[11px] font-semibold text-on-primary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-                      >
-                        Borrow
-                      </Link>
-                    )}
-                    {isStaff && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(b)}
-                          className="rounded-pill border border-primary/30 px-3 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/10 dark:focus-visible:ring-offset-dark-canvas"
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
+                    <AvailabilityChip
+                      available={b.copies_available}
+                      total={b.total_copies}
+                      status={status}
+                      variant="list"
+                    />
+
+                    <div className="flex flex-1 items-center gap-2 sm:flex-none">
+                      {!canBorrow && !noCopies && (
+                        <PlaceHoldButton
+                          bookId={b.id}
+                          patronId={patronId}
+                          bookTitle={b.title}
+                        />
+                      )}
+
+                      {canBorrow && (
+                        <Link
+                          href={`/dashboard/book/checkout?bookId=${b.id}`}
+                          className="
+                            flex-1 rounded-pill bg-primary px-3 py-2
+                            text-center text-[11px] font-semibold text-on-primary
+                            transition hover:bg-primary-active
+                            sm:flex-none sm:py-1
+                          "
                         >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setManagingBookId(b.id)}
-                          className="rounded-pill border border-hairline dark:border-dark-hairline px-3 py-1 text-[11px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-ink dark:hover:text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-                        >
-                          Copies
-                        </button>
-                      </>
-                    )}
-                    {canEdit && (
-                      <Link
-                        href={`/dashboard/admin/books/${b.id}/edit`}
-                        className="rounded-pill border border-hairline dark:border-dark-hairline px-3 py-1 text-[11px] font-semibold text-muted dark:text-on-dark-soft transition hover:border-primary/30 hover:text-primary dark:hover:text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-                      >
-                        Edit
-                      </Link>
-                    )}
+                          Borrow
+                        </Link>
+                      )}
+
+                      {isStaff && (
+                        <>
+                          {canEdit && (
+                            <Link
+                              href={`/dashboard/admin/books/${b.id}/edit`}
+                              className="
+                                flex-1 rounded-pill border border-primary/30
+                                px-3 py-2 text-center text-[11px]
+                                font-semibold text-primary transition
+                                hover:bg-primary/10
+                                sm:flex-none sm:py-1
+                              "
+                            >
+                              Edit
+                            </Link>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setManagingBookId(b.id)}
+                            className="
+                              flex-1 rounded-pill border border-hairline
+                              dark:border-dark-hairline
+                              px-3 py-2 text-[11px]
+                              font-semibold text-muted
+                              dark:text-on-dark-soft transition
+                              hover:border-primary/30 hover:text-ink
+                              dark:hover:text-on-dark
+                              sm:flex-none sm:py-1
+                            "
+                          >
+                            Copies
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </li>
               </BlurFade>

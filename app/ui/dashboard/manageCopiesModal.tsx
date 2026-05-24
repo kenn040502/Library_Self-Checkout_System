@@ -133,7 +133,7 @@ export default function ManageCopiesModal({ bookId, bookTitle, isOpen, onClose, 
       <div className="absolute inset-0 bg-ink/50 dark:bg-dark-canvas/70" />
 
       <div
-        className="relative w-full max-w-lg rounded-card bg-surface-card dark:bg-dark-surface-card border border-hairline dark:border-dark-hairline shadow-[0_4px_16px_rgba(20,20,19,0.08)]"
+        className="relative w-full max-w-lg rounded-card bg-white dark:bg-dark-surface-card border border-hairline dark:border-dark-hairline shadow-[0_4px_16px_rgba(20,20,19,0.08)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

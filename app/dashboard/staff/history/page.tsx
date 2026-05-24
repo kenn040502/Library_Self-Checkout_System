@@ -17,7 +17,14 @@ interface SearchParams {
   book?: string;
   handler?: string;
   page?: string;
+  pageSize?: string;
 }
+
+const ALLOWED_PAGE_SIZES = [10, 20, 50] as const;
+const validPageSize = (v?: string): number => {
+  const n = parseInt(v ?? '', 10);
+  return ALLOWED_PAGE_SIZES.includes(n as 10 | 20 | 50) ? n : 20;
+};
 
 const validStatus = (v?: string): HistoryStatusFilter =>
   v === 'borrowed' || v === 'returned' || v === 'overdue' ? v : 'all';
@@ -47,9 +54,10 @@ export default async function LoanHistoryPage({
     handlerQ: params.handler,
   };
   const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
+  const pageSize = validPageSize(params.pageSize);
 
   // fetchAllLoansHistory uses zero-based paging; UI uses 1-based.
-  const result = await fetchAllLoansHistory(filters, page - 1);
+  const result = await fetchAllLoansHistory(filters, page - 1, pageSize);
 
   return (
     <>
@@ -59,7 +67,7 @@ export default async function LoanHistoryPage({
         title="Loan history"
         description="All borrowing records. Filter, search, and export."
       >
-        <HistoryViewer result={result} initialFilters={{ ...filters, page }} />
+        <HistoryViewer result={result} initialFilters={{ ...filters, page, pageSize }} />
       </AdminShell>
     </>
   );

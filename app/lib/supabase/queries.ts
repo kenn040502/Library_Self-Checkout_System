@@ -1818,7 +1818,9 @@ const computeHistoryStatus = (
 export async function fetchAllLoansHistory(
   filters: HistoryFilters = {},
   page = 0,
+  pageSize: number = HISTORY_PAGE_SIZE,
 ): Promise<HistoryPage> {
+  const effectivePageSize = Math.max(1, Math.min(200, pageSize));
   const supabase = getSupabaseServerClient();
 
   let query = supabase
@@ -1884,8 +1886,8 @@ export async function fetchAllLoansHistory(
     }
   }
 
-  const from = page * HISTORY_PAGE_SIZE;
-  const to = from + HISTORY_PAGE_SIZE - 1;
+  const from = page * effectivePageSize;
+  const to = from + effectivePageSize - 1;
   query = query.range(from, to);
 
   const { data, error, count } = await query;
@@ -2030,7 +2032,7 @@ export async function fetchAllLoansHistory(
     returned: filtered.filter((r) => r.status === 'returned').length,
     overdue: filtered.filter((r) => r.status === 'overdue').length,
     page,
-    pageSize: HISTORY_PAGE_SIZE,
+    pageSize: effectivePageSize,
   };
 }
 
