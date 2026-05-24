@@ -8,6 +8,7 @@ import {
   fetchHoldsForBook,
   cancelHoldForPatron,
 } from '@/app/lib/supabase/queries';
+import { createUserNotification } from '@/app/lib/supabase/notifications';
 import MyBooksTabs from '@/app/ui/dashboard/student/myBooksTabs';
 
 type Tab = 'current' | 'history' | 'reservations';
@@ -15,18 +16,29 @@ type Tab = 'current' | 'history' | 'reservations';
 async function cancelMyHold(formData: FormData) {
   'use server';
   const holdId = formData.get('holdId');
-  if (typeof holdId !== 'string') return;
+  if (typeof holdId !== 'string') return { ok: false, error: 'Invalid hold id.' } as const;
+  const bookTitle = formData.get('bookTitle');
 
   const { user } = await getDashboardSession();
-  if (!user) return;
+  if (!user) return { ok: false, error: 'Not signed in.' } as const;
 
   try {
     await cancelHoldForPatron(holdId, user.id);
+
+    const title = 'Reservation cancelled';
+    const safeTitle = typeof bookTitle === 'string' && bookTitle.trim() ? bookTitle.trim() : null;
+    const message = safeTitle
+      ? `You cancelled your reservation for "${safeTitle}".`
+      : 'You cancelled your reservation successfully.';
+
+    await createUserNotification(user.id, 'hold_cancelled', title, message, { holdId });
   } catch (error) {
     console.error('Failed to cancel hold', error);
+    return { ok: false, error: 'Failed to cancel hold.' } as const;
   }
 
   revalidatePath('/dashboard/my-books');
+  return { ok: true } as const;
 }
 
 export default async function MyBooksPage({

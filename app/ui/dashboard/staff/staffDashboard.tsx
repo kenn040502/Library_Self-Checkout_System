@@ -126,6 +126,7 @@ export default function StaffDashboard({
               e.preventDefault();
               handleScan('checkout');
             }}
+            suppressHydrationWarning
             className="relative flex items-center gap-2.5 rounded-btn border border-on-primary/25 bg-on-primary/15 py-1 pl-3.5 pr-1.5"
           >
             <QrCodeIcon className="h-4 w-4 opacity-80" />
@@ -136,10 +137,12 @@ export default function StaffDashboard({
               onChange={(e) => setScanInput(e.target.value)}
               placeholder="Scan barcode or type SWI-xxxxx…"
               autoComplete="off"
+              suppressHydrationWarning
               className="flex-1 bg-transparent font-sans text-body-sm text-on-primary placeholder:text-on-primary/55 outline-none"
             />
             <button
               type="submit"
+              suppressHydrationWarning
               className="inline-flex h-9 items-center rounded-btn bg-on-primary px-4 font-sans text-button text-primary transition hover:bg-on-primary/90"
             >
               Process
@@ -149,6 +152,7 @@ export default function StaffDashboard({
             <button
               type="button"
               onClick={() => handleScan('checkout')}
+              suppressHydrationWarning
               className="rounded-btn border border-on-primary/25 bg-on-primary/15 px-3 py-1.5 font-sans text-caption-uppercase transition hover:bg-on-primary/25"
             >
               Checkout
@@ -156,6 +160,7 @@ export default function StaffDashboard({
             <button
               type="button"
               onClick={() => handleScan('checkin')}
+              suppressHydrationWarning
               className="rounded-btn border border-on-primary/25 bg-on-primary/15 px-3 py-1.5 font-sans text-caption-uppercase transition hover:bg-on-primary/25"
             >
               Return

@@ -1,6 +1,6 @@
 'use server';
 
-import { checkOut as sipCheckOut, checkIn as sipCheckIn } from '@/lib/sip2';
+import { checkOut as sipCheckOut, checkIn as sipCheckIn, login as sipLogin, logout as sipLogout } from '@/lib/sip2';
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { auth } from '@/auth';
@@ -26,6 +26,44 @@ import {
 const SIP2_INSTITUTION_ID = process.env.SIP2_INSTITUTION_ID ?? 'LIB001';
 const SIP2_TERMINAL_PASSWORD = process.env.SIP2_TERMINAL_PASSWORD ?? '';
 const SIP2_PATRON_PASSWORD = process.env.SIP2_PATRON_PASSWORD ?? '';
+const SIP2_LOGIN_USER_ID = process.env.SIP2_LOGIN_USER_ID ?? '';
+const SIP2_LOGIN_PASSWORD = process.env.SIP2_LOGIN_PASSWORD ?? '';
+const SIP2_LOCATION_CODE = process.env.SIP2_LOCATION_CODE ?? 'MAIN';
+
+async function performSipLogin() {
+  if (!SIP2_LOGIN_USER_ID || !SIP2_LOGIN_PASSWORD) return;
+  try {
+    const result = await sipLogin({
+      uid: '1',
+      pwd: '1',
+      loginUserId: SIP2_LOGIN_USER_ID,
+      loginPassword: SIP2_LOGIN_PASSWORD,
+      locationCode: SIP2_LOCATION_CODE,
+    }) as { status?: number };
+    if (result?.status !== 1) {
+      console.warn('[SIP2] Login returned non-OK', result);
+    }
+  } catch (err) {
+    console.error('[SIP2] Login failed (non-fatal)', err);
+  }
+}
+
+async function performSipLogout(patronIdentifier: string, transactionDate: Date) {
+  try {
+    const result = await sipLogout({
+      transactionDate: formatSipDate(transactionDate),
+      institutionId: SIP2_INSTITUTION_ID,
+      patronIdentifier,
+      terminalPassword: SIP2_TERMINAL_PASSWORD,
+      patronPassword: SIP2_PATRON_PASSWORD,
+    }) as { status?: number };
+    if (result?.status !== 1) {
+      console.warn('[SIP2] Logout returned non-OK', result);
+    }
+  } catch (err) {
+    console.error('[SIP2] Logout failed (non-fatal)', err);
+  }
+}
 
 const pad = (n: number) => n.toString().padStart(2, '0');
 
@@ -573,6 +611,8 @@ export async function checkoutBookAction(
   const itemIdentifier =
     itemIdentifierFromForm || copy.barcode || copy.id; // fallback chain
 
+  await performSipLogin();
+
   try {
     const sipResult = await sipCheckOut({
       scRenewalPolicy: 'Y',
@@ -596,6 +636,8 @@ export async function checkoutBookAction(
     console.error('SIP2 checkout failed', error);
     // Supabase is source of truth; SIP failure is logged only.
   }
+
+  await performSipLogout(borrowerIdentifier, borrowedAt);
 
   revalidatePath('/dashboard');
   revalidatePath('/dashboard/book/checkout');
@@ -894,6 +936,8 @@ export async function checkinBookAction(
   const itemIdentifier =
     identifier || loan.copy?.barcode || loan.copy_id.toString();
 
+  await performSipLogin();
+
   try {
     const sipResult = await sipCheckIn({
       noBlock: 'N',
@@ -914,6 +958,8 @@ export async function checkinBookAction(
     console.error('SIP2 check-in failed', error);
     // Supabase is source of truth; SIP failure is logged only.
   }
+
+  await performSipLogout(loan.borrower?.email ?? loan.user_id ?? '', now);
 
   const borrowerLabel =
     loan.borrower?.profile?.display_name ?? loan.borrower?.email ?? 'borrower';

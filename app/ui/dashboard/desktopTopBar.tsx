@@ -16,7 +16,7 @@ function getInitials(name: string | null | undefined): string {
   return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 }
 
-function timeAgo(iso: string): string {
+function calculateTimeAgo(iso: string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
@@ -55,8 +55,14 @@ export default function DesktopTopBar({ user, isBypassed }: DesktopTopBarProps) 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const initials = getInitials(user.name);
+
+  // Only run client-side calculations after component mounts to avoid hydration mismatches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Background unread poll (every 90s) — keeps the dot accurate
   useEffect(() => {
@@ -319,7 +325,7 @@ export default function DesktopTopBar({ user, isBypassed }: DesktopTopBarProps) 
                         {/* Time + star action */}
                         <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
                           <span className="font-sans text-caption text-muted-soft dark:text-on-dark-soft">
-                            {timeAgo(n.created_at)}
+                            {isMounted ? calculateTimeAgo(n.created_at) : 'just now'}
                           </span>
                           <button
                             type="button"

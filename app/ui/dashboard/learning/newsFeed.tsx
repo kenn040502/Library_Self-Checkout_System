@@ -34,11 +34,12 @@ export default function NewsFeed({ stories }: { stories: NewsItem[] }) {
       <div className="relative group">
         <MagnifyingGlassIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-swin-charcoal/40 transition-colors group-focus-within:text-swin-red dark:text-white/30" />
         <input
-          type="search"
+          type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search news headlines…"
           className="w-full rounded-2xl border border-swin-charcoal/10 bg-swin-charcoal/5 py-3.5 pl-12 pr-10 text-sm text-swin-charcoal placeholder:text-swin-charcoal/40 transition-all focus:border-swin-red focus:bg-white focus:outline-none focus:ring-4 focus:ring-swin-red/5 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 dark:focus:border-swin-red dark:focus:bg-slate-900"
+          suppressHydrationWarning
         />
         {query && (
           <button
@@ -53,7 +54,7 @@ export default function NewsFeed({ stories }: { stories: NewsItem[] }) {
       </div>
 
       {/* Source filter pills */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
         {SOURCES.map((src) => {
           const isActive = source === src;
           const colorClass = src === 'All' ? '' : SOURCE_COLORS[src] ?? 'bg-swin-red';
@@ -62,12 +63,10 @@ export default function NewsFeed({ stories }: { stories: NewsItem[] }) {
               key={src}
               type="button"
               onClick={() => setSource(src)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-[0.96] ${
                 isActive
-                  ? src === 'All'
-                    ? 'bg-swin-charcoal text-white dark:bg-white dark:text-swin-charcoal'
-                    : `${colorClass} text-white shadow-sm`
-                  : 'bg-swin-charcoal/5 text-swin-charcoal hover:bg-swin-charcoal/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10'
+                  ? `${src === 'All' ? 'bg-swin-red' : colorClass} text-white shadow-sm shadow-swin-red/30`
+                  : 'bg-swin-charcoal/[0.08] text-swin-charcoal/60 hover:bg-swin-charcoal/[0.12] hover:text-swin-charcoal dark:bg-white/[0.08] dark:text-white/50 dark:hover:bg-white/[0.14] dark:hover:text-white'
               }`}
             >
               {src}

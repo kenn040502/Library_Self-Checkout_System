@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { type ReactNode, useState, useMemo } from 'react';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import DevToGrid, { type DevToArticle } from './devToGrid';
 
-export default function CommunityFeed({ articles }: { articles: DevToArticle[] }) {
+export default function CommunityFeed({ articles, tagFilter }: { articles: DevToArticle[]; tagFilter?: ReactNode }) {
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
 
@@ -42,6 +42,8 @@ export default function CommunityFeed({ articles }: { articles: DevToArticle[] }
           </button>
         )}
       </div>
+
+      {tagFilter}
 
       {/* Result count */}
       {q && (

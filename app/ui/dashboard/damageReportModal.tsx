@@ -112,14 +112,18 @@ export default function DamageReportModal({ open, loanId, onClose, onSubmit }: D
       role="dialog"
       aria-modal="true"
       aria-labelledby="damage-report-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center sm:p-4"
     >
       <div
         className="absolute inset-0 bg-ink/50 dark:bg-dark-canvas/70 backdrop-blur-sm"
         onClick={() => !busy && onClose()}
       />
-      <div className="relative w-full max-w-lg rounded-card border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card p-6 shadow-[0_4px_16px_rgba(20,20,19,0.08)]">
-        <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="relative w-full sm:max-w-lg rounded-t-[1.25rem] rounded-b-none sm:rounded-card border border-hairline dark:border-dark-hairline bg-surface-card dark:bg-dark-surface-card shadow-[0_-4px_24px_rgba(20,20,19,0.12)] sm:shadow-[0_4px_16px_rgba(20,20,19,0.08)] max-h-[92dvh] overflow-y-auto overscroll-contain">
+        <div className="sticky top-0 z-10 bg-surface-card dark:bg-dark-surface-card px-5 pt-4 pb-3 border-b border-hairline dark:border-dark-hairline sm:hidden">
+          <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-hairline dark:bg-dark-hairline" />
+        </div>
+        <div className="p-5 sm:p-6">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-pill bg-primary/10 dark:bg-dark-primary/15">
               <ExclamationTriangleIcon className="h-5 w-5 text-primary dark:text-dark-primary" />
@@ -193,7 +197,7 @@ export default function DamageReportModal({ open, loanId, onClose, onSubmit }: D
             value={notes}
             maxLength={500}
             onChange={(e) => setNotes(e.target.value)}
-            rows={3}
+            rows={2}
             placeholder="e.g. cover torn on spine, water damage on pages 40-60"
             className="w-full rounded-btn border border-hairline dark:border-dark-hairline bg-canvas dark:bg-dark-surface-soft px-3.5 py-2 font-sans text-body-md text-ink dark:text-on-dark placeholder:text-muted-soft dark:placeholder:text-on-dark-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
           />
@@ -271,6 +275,7 @@ export default function DamageReportModal({ open, loanId, onClose, onSubmit }: D
           >
             {busy ? 'Uploading\u2026' : 'Attach to return'}
           </button>
+        </div>
         </div>
       </div>
     </div>

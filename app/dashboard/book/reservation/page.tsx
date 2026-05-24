@@ -7,6 +7,7 @@ import {
   fetchActiveHoldsForPatron,
   type PatronHold,
 } from '@/app/lib/supabase/queries';
+import { createUserNotification } from '@/app/lib/supabase/notifications';
 import AdminShell from '@/app/ui/dashboard/adminShell';
 import HoldCard from '@/app/ui/dashboard/primitives/HoldCard';
 import KpiCard from '@/app/ui/dashboard/primitives/KpiCard';
@@ -16,18 +17,29 @@ async function cancelReservation(formData: FormData) {
   'use server';
 
   const holdId = formData.get('holdId');
-  if (typeof holdId !== 'string') return;
+  if (typeof holdId !== 'string') return { ok: false, error: 'Invalid hold id.' } as const;
+  const bookTitle = formData.get('bookTitle');
 
   const { user } = await getDashboardSession();
-  if (!user) return;
+  if (!user) return { ok: false, error: 'Not signed in.' } as const;
 
   try {
     await cancelHoldForPatron(holdId, user.id);
+
+    const title = 'Reservation cancelled';
+    const safeTitle = typeof bookTitle === 'string' && bookTitle.trim() ? bookTitle.trim() : null;
+    const message = safeTitle
+      ? `You cancelled your reservation for "${safeTitle}".`
+      : 'You cancelled your reservation successfully.';
+
+    await createUserNotification(user.id, 'hold_cancelled', title, message, { holdId });
   } catch (error) {
     console.error('Failed to cancel hold', error);
+    return { ok: false, error: 'Failed to cancel hold.' } as const;
   }
 
   revalidatePath('/dashboard/book/reservation');
+  return { ok: true } as const;
 }
 
 function sortReadyFirst(holds: PatronHold[]): PatronHold[] {

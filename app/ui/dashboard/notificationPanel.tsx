@@ -76,13 +76,29 @@ const typeConfig = {
       </svg>
     ),
   },
+  hold_cancelled: {
+    label: 'Hold cancelled',
+    dot: 'bg-error',
+    badge: 'bg-error/10 text-error',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75 14.25 14.25m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    ),
+  },
 } as const;
 
 export default function NotificationPanel() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Only run client-side calculations after component mounts to avoid hydration mismatches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -224,7 +240,7 @@ export default function NotificationPanel() {
                   {/* Time + mark read */}
                   <div className="flex flex-shrink-0 flex-col items-end gap-2">
                     <span className="font-sans text-caption text-muted-soft dark:text-on-dark-soft">
-                      {timeAgo(n.created_at)}
+                      {isMounted ? timeAgo(n.created_at) : 'just now'}
                     </span>
                     {!n.is_read && (
                       <button

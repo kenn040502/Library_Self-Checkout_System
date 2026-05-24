@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowTopRightOnSquareIcon,
@@ -38,7 +38,13 @@ const SOURCE_COLORS: Record<string, string> = {
 
 // ── Article detail panel ──────────────────────────────────
 function ArticlePanel({ item, onClose }: { item: NewsItem; onClose: () => void }) {
+  const [isMounted, setIsMounted] = useState(false);
   const color = SOURCE_COLORS[item.source] ?? 'bg-swin-red';
+
+  // Only run client-side calculations after component mounts to avoid hydration mismatches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <div
@@ -80,11 +86,11 @@ function ArticlePanel({ item, onClose }: { item: NewsItem; onClose: () => void }
           {!item.imageUrl && (
             <div className="flex items-center gap-2">
               <span className={`rounded-full ${color} px-3 py-1 text-xs font-bold text-white`}>{item.source}</span>
-              <span className="text-xs text-swin-charcoal/40 dark:text-white/40">{timeAgo(item.pubDate)}</span>
+              <span className="text-xs text-swin-charcoal/40 dark:text-white/40">{isMounted ? timeAgo(item.pubDate) : 'just now'}</span>
             </div>
           )}
           {item.imageUrl && (
-            <span className="text-xs text-swin-charcoal/40 dark:text-white/40">{timeAgo(item.pubDate)}</span>
+            <span className="text-xs text-swin-charcoal/40 dark:text-white/40">{isMounted ? timeAgo(item.pubDate) : 'just now'}</span>
           )}
 
           {/* Title */}
@@ -147,6 +153,12 @@ function ImagePlaceholder({ source, idx }: { source: string; idx: number }) {
 // ── Main news grid ────────────────────────────────────────
 export default function NewsGrid({ stories }: { stories: NewsItem[] }) {
   const [selected, setSelected] = useState<NewsItem | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Only run client-side calculations after component mounts to avoid hydration mismatches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   if (stories.length === 0) {
     return (
@@ -199,7 +211,7 @@ export default function NewsGrid({ stories }: { stories: NewsItem[] }) {
                     {hero.source}
                   </span>
                   <span className="flex items-center gap-1 text-xs text-swin-charcoal/40 dark:text-white/40">
-                    <ClockIcon className="h-3 w-3" /> {timeAgo(hero.pubDate)}
+                    <ClockIcon className="h-3 w-3" /> {isMounted ? timeAgo(hero.pubDate) : 'just now'}
                   </span>
                 </div>
                 <h2 className="text-lg font-bold leading-snug text-swin-charcoal group-hover:text-swin-red transition-colors dark:text-white dark:group-hover:text-swin-red sm:text-xl">
@@ -262,7 +274,7 @@ export default function NewsGrid({ stories }: { stories: NewsItem[] }) {
                   )}
                   <div className="mt-auto flex items-center gap-1 pt-2 text-[11px] text-swin-charcoal/40 dark:text-white/35">
                     <ClockIcon className="h-3 w-3" />
-                    {timeAgo(item.pubDate)}
+                    {isMounted ? timeAgo(item.pubDate) : 'just now'}
                   </div>
                 </div>
               </button>

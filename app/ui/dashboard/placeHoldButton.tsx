@@ -14,19 +14,40 @@ type PlaceHoldButtonProps = {
 
 export default function PlaceHoldButton({ bookId, patronId, bookTitle }: PlaceHoldButtonProps) {
   const supabase = supabaseBrowserClient;
+  const [resolvedPatronId, setResolvedPatronId] = useState<string | undefined>(patronId);
   const [holdState, setHoldState] = useState<HoldState>('none');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // If patronId wasn't provided by the page, resolve it from the current session.
+  useEffect(() => {
+    if (patronId) {
+      setResolvedPatronId(patronId);
+      return;
+    }
+
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (!alive) return;
+      if (error) return;
+      setResolvedPatronId(data.user?.id);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [patronId, supabase]);
+
   // Check if the user already has an active hold for this book
   useEffect(() => {
-    const checkExistingHold = async () => {
-      if (!patronId) return;
+    const checkExistingHold = async (pid: string) => {
+      if (!pid) return;
 
       const { data, error } = await supabase
         .from('Holds')
         .select('id, status')
-        .eq('patron_id', patronId)
+        .eq('patron_id', pid)
         .eq('book_id', bookId)
         .in('status', ['queued', 'ready'])
         .order('placed_at', { ascending: true })
@@ -44,14 +65,14 @@ export default function PlaceHoldButton({ bookId, patronId, bookTitle }: PlaceHo
       }
     };
 
-    checkExistingHold();
+    if (resolvedPatronId) checkExistingHold(resolvedPatronId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patronId, bookId]);
+  }, [resolvedPatronId, bookId]);
 
   const handleClick = async () => {
     setError(null);
 
-    if (!patronId) {
+    if (!resolvedPatronId) {
       setError('Please log in to place a hold.');
       return;
     }
@@ -72,6 +93,23 @@ export default function PlaceHoldButton({ bookId, patronId, bookTitle }: PlaceHo
       const data = await res.json();
 
       if (!res.ok) {
+        // If the server says a hold already exists, refresh local state so the UI shows it.
+        if (res.status === 409) {
+          const { data: existing, error: existingErr } = await supabase
+            .from('Holds')
+            .select('id, status')
+            .eq('patron_id', resolvedPatronId)
+            .eq('book_id', bookId)
+            .in('status', ['queued', 'ready'])
+            .order('placed_at', { ascending: true })
+            .limit(1);
+
+          if (!existingErr && existing && existing.length > 0) {
+            setHoldState(existing[0].status === 'ready' ? 'ready' : 'queued');
+            return;
+          }
+        }
+
         setError(data.error ?? 'Failed to place hold. Please try again.');
         return;
       }

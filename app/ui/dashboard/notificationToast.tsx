@@ -74,6 +74,16 @@ const typeConfig = {
       </svg>
     ),
   },
+  hold_cancelled: {
+    label: 'Hold cancelled',
+    iconColor: 'text-error',
+    badge: 'bg-error/10 text-error',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75 14.25 14.25m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    ),
+  },
 } as const;
 
 export default function NotificationToast() {
@@ -146,7 +156,7 @@ export default function NotificationToast() {
           <div
             key={toast.id}
             className={clsx(
-              'pointer-events-auto flex w-80 items-start gap-3 rounded-card border border-hairline bg-surface-card p-4 shadow-[0_4px_16px_rgba(20,20,19,0.08)] transition-all duration-300 dark:border-dark-hairline dark:bg-dark-surface-card',
+              'pointer-events-auto flex w-[min(20rem,calc(100vw-1.5rem))] items-start gap-3 rounded-card border border-hairline bg-canvas p-4 shadow-[0_4px_16px_rgba(20,20,19,0.08)] transition-all duration-300 dark:border-dark-hairline dark:bg-dark-canvas',
               toast.dismissing
                 ? 'translate-x-4 opacity-0'
                 : 'translate-x-0 opacity-100',

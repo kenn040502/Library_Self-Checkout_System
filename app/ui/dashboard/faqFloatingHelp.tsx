@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 
 const guideTopics = [
@@ -43,7 +43,9 @@ export default function FaqFloatingHelp() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isOnFaqPage = pathname === '/dashboard/faq';
+  const isReelsView = pathname === '/dashboard/learning/youtube' && searchParams.get('view') === 'reels';
 
   const topicHref = (id: string) =>
     isOnFaqPage ? `#${id}-title` : `/dashboard/faq#${id}-title`;
@@ -71,7 +73,7 @@ export default function FaqFloatingHelp() {
   }, [open]);
 
   return (
-    <div ref={panelRef} className="fixed bottom-40 right-4 z-40 flex flex-col items-end gap-3 md:bottom-24 md:right-8">
+    <div ref={panelRef} className={`fixed bottom-40 right-4 z-[60] flex flex-col items-end gap-3 md:bottom-24 md:right-8 ${isReelsView ? 'hidden' : ''}`}>
       {/* Panel */}
       {open && (
         <div

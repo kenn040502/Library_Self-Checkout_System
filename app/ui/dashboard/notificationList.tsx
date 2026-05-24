@@ -295,8 +295,8 @@ export default function NotificationList({ filter: initialFilter = 'all', search
       </div>
 
       {/* Grouped list */}
-      <div className="overflow-hidden rounded-card border border-hairline bg-surface-card dark:border-dark-hairline dark:bg-dark-surface-card">
-        {groups.length === 0 ? (
+      {groups.length === 0 ? (
+        <div className="overflow-hidden rounded-card border border-hairline bg-surface-card dark:border-dark-hairline dark:bg-dark-surface-card">
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <InboxIcon className="h-9 w-9 text-muted-soft dark:text-on-dark-soft" />
             <div>
@@ -316,14 +316,15 @@ export default function NotificationList({ filter: initialFilter = 'all', search
               </p>
             </div>
           </div>
-        ) : (
-          groups.map(([dayLabel, items], gi) => (
-            <div key={dayLabel}>
-              <div
-                className={`border-b border-hairline-soft bg-surface-cream-strong/60 px-5 py-2 font-sans text-caption-uppercase text-muted dark:border-dark-hairline dark:bg-dark-surface-strong/60 dark:text-on-dark-soft ${
-                  gi > 0 ? 'border-t' : ''
-                }`}
-              >
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {groups.map(([dayLabel, items]) => (
+            <div
+              key={dayLabel}
+              className="overflow-hidden rounded-card border border-hairline bg-surface-card dark:border-dark-hairline dark:bg-dark-surface-card"
+            >
+              <div className="border-b border-hairline-soft bg-surface-cream-strong/60 px-5 py-2 font-sans text-caption-uppercase text-muted dark:border-dark-hairline dark:bg-dark-surface-strong/60 dark:text-on-dark-soft">
                 {dayLabel}
               </div>
               <ul className="divide-y divide-hairline-soft dark:divide-dark-hairline">
@@ -365,9 +366,9 @@ export default function NotificationList({ filter: initialFilter = 'all', search
                 ))}
               </ul>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

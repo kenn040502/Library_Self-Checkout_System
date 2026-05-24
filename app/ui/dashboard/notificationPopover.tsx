@@ -38,6 +38,10 @@ const typeConfig: Record<string, { badge: string; icon: React.ReactNode }> = {
     badge: 'bg-accent-teal/10 text-accent-teal',
     icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-3 w-3"><path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>,
   },
+  hold_cancelled: {
+    badge: 'bg-error/10 text-error',
+    icon: <XMarkIcon className="h-3 w-3" />,
+  },
 };
 
 const fallbackConfig = {
@@ -55,7 +59,13 @@ export default function NotificationPopover({ hasUnread, onAllRead }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Only run client-side calculations after component mounts to avoid hydration mismatches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -128,7 +138,7 @@ export default function NotificationPopover({ hasUnread, onAllRead }: Props) {
       {/* Panel */}
       {open && (
         <div
-          className="fixed right-4 top-[57px] z-50 w-72 rounded-card border border-hairline bg-white shadow-[0_4px_24px_rgba(20,20,19,0.12)] dark:border-dark-hairline dark:bg-dark-surface-card md:hidden"
+          className="fixed right-3 top-[57px] z-50 w-[min(16rem,calc(100vw-1.5rem))] rounded-card border border-hairline bg-canvas shadow-[0_4px_24px_rgba(20,20,19,0.12)] dark:border-dark-hairline dark:bg-dark-canvas md:hidden"
           style={{ animation: 'notifPanelIn 0.25s cubic-bezier(0.16,1,0.3,1) both' }}
         >
           <style>{`
@@ -193,7 +203,7 @@ export default function NotificationPopover({ hasUnread, onAllRead }: Props) {
                           {n.message}
                         </p>
                         <p className="mt-0.5 font-mono text-[10px] text-muted-soft dark:text-on-dark-soft">
-                          {timeAgo(n.created_at)}
+                          {isMounted ? timeAgo(n.created_at) : 'just now'}
                         </p>
                       </div>
                     </li>
