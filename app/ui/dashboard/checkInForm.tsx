@@ -13,6 +13,8 @@ import DamageReportModal, { type DamageSubmitPayload } from '@/app/ui/dashboard/
 type CheckInFormProps = {
   activeLoanCount: number;
   defaultIdentifier?: string;
+  allowPatronLookup?: boolean;
+  allowBulkMode?: boolean;
 };
 
 type Mode = 'scan' | 'patron';
@@ -25,7 +27,12 @@ const SEVERITY_LABEL: Record<string, string> = {
   needs_inspection: 'Needs inspection',
 };
 
-export default function CheckInForm({ activeLoanCount, defaultIdentifier }: CheckInFormProps) {
+export default function CheckInForm({
+  activeLoanCount,
+  defaultIdentifier,
+  allowPatronLookup = true,
+  allowBulkMode = true,
+}: CheckInFormProps) {
   const [state, formAction] = useActionState(checkinBookAction, initialActionState);
   const formRef = useRef<HTMLFormElement | null>(null);
   const identifierRef = useRef<HTMLInputElement | null>(null);
@@ -45,6 +52,17 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
 
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkFeed, setBulkFeed] = useState<BulkEntry[]>([]);
+
+  useEffect(() => {
+    if (!allowBulkMode) {
+      setBulkMode(false);
+      setBulkFeed([]);
+    }
+  }, [allowBulkMode]);
+
+  useEffect(() => {
+    if (!allowPatronLookup && mode !== 'scan') setMode('scan');
+  }, [allowPatronLookup, mode]);
 
   // On success: optionally preserve scan input refocus for bulk, or show receipt
   useEffect(() => {
@@ -113,14 +131,14 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
   };
 
   const canSubmit =
-    (mode === 'scan' ? identifier.trim().length > 0 : patronLoanId.length > 0);
+    mode === 'patron' ? patronLoanId.length > 0 : identifier.trim().length > 0;
 
   const singleReceipt = !bulkMode && bulkFeed[0] && state.status === 'success';
 
   return (
     <>
       {/* Bulk mode receipt strip */}
-      {bulkMode && bulkFeed.length > 0 && (
+      {allowBulkMode && bulkMode && bulkFeed.length > 0 && (
         <ul className="mb-3 space-y-1.5">
           {bulkFeed.map((entry) => (
             <li
@@ -149,23 +167,26 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
               {activeLoanCount} book{activeLoanCount === 1 ? '' : 's'} currently on loan.
             </p>
           </div>
-          <label className="flex items-center gap-2 font-sans text-body-sm font-medium text-muted dark:text-on-dark-soft">
-            <input
-              type="checkbox"
-              checked={bulkMode}
-              suppressHydrationWarning
-              onChange={(e) => {
-                setBulkMode(e.target.checked);
-                if (!e.target.checked) setBulkFeed([]);
-              }}
-            />
-            Continue scanning (bulk mode)
-          </label>
+          {allowBulkMode ? (
+            <label className="flex items-center gap-2 font-sans text-body-sm font-medium text-muted dark:text-on-dark-soft">
+              <input
+                type="checkbox"
+                checked={bulkMode}
+                suppressHydrationWarning
+                onChange={(e) => {
+                  setBulkMode(e.target.checked);
+                  if (!e.target.checked) setBulkFeed([]);
+                }}
+              />
+              Continue scanning (bulk mode)
+            </label>
+          ) : null}
         </div>
 
         {/* Mode tabs */}
-        <div role="tablist" aria-label="Lookup mode" className="mb-4 flex gap-1 rounded-btn border border-hairline dark:border-dark-hairline bg-surface-cream-strong dark:bg-dark-surface-strong p-1">
-          {(['scan', 'patron'] as Mode[]).map((m) => {
+        {allowPatronLookup ? (
+          <div role="tablist" aria-label="Lookup mode" className="mb-4 flex gap-1 rounded-btn border border-hairline dark:border-dark-hairline bg-surface-cream-strong dark:bg-dark-surface-strong p-1">
+            {(['scan', 'patron'] as Mode[]).map((m) => {
             const active = mode === m;
             return (
               <button
@@ -185,8 +206,9 @@ export default function CheckInForm({ activeLoanCount, defaultIdentifier }: Chec
                 {m === 'scan' ? 'Scan copy' : 'Find by borrower'}
               </button>
             );
-          })}
-        </div>
+            })}
+          </div>
+        ) : null}
 
         <form ref={formRef} action={formAction} className="space-y-4">
           {/* Hidden damage-report payload (populated by the modal) */}

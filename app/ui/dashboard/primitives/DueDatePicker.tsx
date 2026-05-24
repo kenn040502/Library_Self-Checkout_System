@@ -66,6 +66,7 @@ export default function DueDatePicker({
               key={days}
               type="button"
               onClick={() => handlePreset(days)}
+              suppressHydrationWarning
               className={clsx(
                 'rounded-pill px-3 py-1.5 font-sans text-caption transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas',
@@ -88,6 +89,7 @@ export default function DueDatePicker({
           min={minDate}
           max={maxDate}
           onChange={(e) => setValue(e.target.value)}
+          suppressHydrationWarning
           className="h-10 w-full rounded-btn border border-hairline bg-canvas px-3 font-sans text-body-md text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-dark-hairline dark:bg-dark-surface-soft dark:text-on-dark"
           required
         />

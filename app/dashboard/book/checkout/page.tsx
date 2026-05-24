@@ -32,6 +32,11 @@ export default async function BorrowBooksPage({
   const params = searchParams ? await searchParams : undefined;
   const raw = params?.q;
   const searchTerm = Array.isArray(raw) ? raw[0]?.trim() ?? '' : raw?.trim() ?? '';
+  const rawScan = params?.scan;
+  const scan = Array.isArray(rawScan) ? rawScan[0]?.trim() ?? '' : rawScan?.trim() ?? '';
+  const autoOpenScanner = scan === '1' || scan.toLowerCase() === 'true' || scan.toLowerCase() === 'camera';
+  const rawPatron = params?.patron;
+  const initialPatronQuery = Array.isArray(rawPatron) ? rawPatron[0]?.trim() ?? '' : rawPatron?.trim() ?? '';
 
   // Extract bookId for pre-selection
   const rawBookId = params?.bookId;
@@ -74,6 +79,8 @@ export default async function BorrowBooksPage({
           <CheckOutForm
             books={books}
             defaultDueDate={defaultDueDate}
+            autoOpenScanner={autoOpenScanner}
+            initialPatronQuery={initialPatronQuery}
             preSelectedBookId={preSelectedBookId}
             selfCheckout={!canProcessLoans}
             selfUserId={!canProcessLoans ? user?.id : undefined}

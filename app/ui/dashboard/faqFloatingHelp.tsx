@@ -9,34 +9,23 @@ const guideTopics = [
   {
     id: 'how-to-borrow',
     label: 'How to Borrow a Book',
-    description: 'Step-by-step checkout walkthrough',
   },
   {
     id: 'due-dates',
     label: 'Loan Period & Due Dates',
-    description: '14-day loans, renewals & late returns',
   },
   {
     id: 'returning',
     label: 'Returning Books',
-    description: 'How to return and verify the record',
   },
   {
     id: 'scanner',
     label: 'Using the Barcode Scanner',
-    description: 'Camera scan tips & troubleshooting',
   },
   {
     id: 'account',
     label: 'Account & Notifications',
-    description: 'Sign-in, profile and reminders',
   },
-];
-
-const quickActions = [
-  { label: 'Borrow a book', href: '/dashboard/book/checkout' },
-  { label: 'Camera scan', href: '/dashboard/cameraScan' },
-  { label: 'Active loans', href: '/dashboard' },
 ];
 
 export default function FaqFloatingHelp() {
@@ -50,24 +39,18 @@ export default function FaqFloatingHelp() {
   const topicHref = (id: string) =>
     isOnFaqPage ? `#${id}-title` : `/dashboard/faq#${id}-title`;
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
@@ -77,7 +60,7 @@ export default function FaqFloatingHelp() {
       {/* Panel */}
       {open && (
         <div
-          className="w-60 rounded-card border border-hairline bg-surface-card shadow-[0_4px_16px_rgba(20,20,19,0.08)] dark:border-dark-hairline dark:bg-dark-surface-card"
+          className="w-60 rounded-card border border-hairline surface-card-solid dark:surface-card-solid shadow-[0_4px_16px_rgba(20,20,19,0.08)] dark:border-dark-hairline"
           style={{ animation: 'faqPanelIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both' }}
         >
           <style>{`
@@ -110,7 +93,7 @@ export default function FaqFloatingHelp() {
                   <Link
                     href={topicHref(topic.id)}
                     onClick={() => setOpen(false)}
-                    className="group flex items-center gap-2 rounded-btn px-2 py-1.5 transition hover:bg-primary/5 dark:hover:bg-primary/10"
+                    className="group flex items-center gap-2 rounded-btn px-2 py-1.5 transition hover:bg-surface-soft dark:hover:bg-dark-surface-strong"
                   >
                     <span className="flex h-4 w-4 flex-none items-center justify-center rounded-full bg-surface-cream-strong font-sans text-[9px] font-bold text-muted group-hover:bg-primary group-hover:text-on-primary dark:bg-dark-surface-strong dark:text-on-dark-soft">
                       {index + 1}
@@ -131,10 +114,7 @@ export default function FaqFloatingHelp() {
           <div className="rounded-b-card px-3 py-2">
             <p className="font-sans text-[10px] text-muted dark:text-on-dark-soft">
               Visit Level 1 desk or{' '}
-              <a
-                href="mailto:library@swinburne.edu.my"
-                className="font-semibold text-primary hover:underline"
-              >
+              <a href="mailto:library@swinburne.edu.my" className="font-semibold text-primary hover:underline">
                 email us
               </a>
             </p>
@@ -142,19 +122,19 @@ export default function FaqFloatingHelp() {
         </div>
       )}
 
-      {/* AI recommendations button — mobile only */}
+      {/* Reading Assistant button — mobile only */}
       <Link
-        href="/dashboard/recommendations"
-        aria-label="AI recommendations"
+        href="/dashboard/reading-assistant"
+        aria-label="Reading Assistant"
         className="md:hidden flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg transition-all duration-300 hover:bg-primary-active hover:scale-110 active:scale-95 dark:bg-dark-primary"
       >
         <SparklesIcon className="h-5 w-5" />
       </Link>
 
-      {/* FAB trigger */}
+      {/* FAQ panel FAB */}
       <button
         type="button"
-        aria-label={open ? 'Close help panel' : 'Open student guide'}
+        aria-label={open ? 'Close student guide' : 'Open student guide'}
         onClick={() => setOpen((v) => !v)}
         className="flex h-12 w-12 items-center justify-center rounded-full bg-ink text-on-dark shadow-lg transition-all duration-300 hover:bg-primary hover:scale-110 active:scale-95 dark:bg-dark-surface-strong dark:hover:bg-primary"
         suppressHydrationWarning

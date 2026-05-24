@@ -123,13 +123,29 @@ export const studentFaqSections: StudentFaqSection[] = [
           'A staff member will scan the book to mark it as returned in the system.',
           'You can verify the return by checking My Books → Current Loans — the item should disappear once the return is processed.',
           'If you returned the book but it still shows as active, wait a few minutes and refresh the page.',
-        ],
-        tags: ['Return', 'Service desk', 'Level 1'],
-      },
-      {
-        question: 'The book I returned is still showing as active. What should I do?',
-        answer: [
-          'Returns are processed by library staff. If the return was not scanned at the desk, the item will remain on your record.',
+	        ],
+	        tags: ['Return', 'Service desk', 'Level 1'],
+	      },
+	      {
+	        question: 'What if the return scan fails?',
+	        answer: [
+	          'If the barcode cannot be scanned, library staff can enter the barcode number manually.',
+	          'If the barcode is damaged or unreadable, bring the book to the library service desk for assistance.',
+	        ],
+	        tags: ['Return', 'Barcode', 'Service desk'],
+	      },
+	      {
+	        question: 'What if a book is damaged when I return it?',
+	        answer: [
+	          'Tell the library staff at the service desk when you return the book.',
+	          'They will record the condition during check-in so the item can be handled appropriately.',
+	        ],
+	        tags: ['Return', 'Damage', 'Service desk'],
+	      },
+	      {
+	        question: 'The book I returned is still showing as active. What should I do?',
+	        answer: [
+	          'Returns are processed by library staff. If the return was not scanned at the desk, the item will remain on your record.',
           'Contact the library service desk with your student ID and the book title to have the record corrected.',
           'You can also email the library directly — include your student ID and the title that needs updating.',
         ],

@@ -21,6 +21,8 @@ type PatronComboboxProps = {
   nameOfName?: string;
   /** called when the user picks a patron — lets the parent fetch live loan-count etc. */
   onSelect?: (patron: PatronOption | null) => void;
+  /** optional initial text shown in the input (e.g. deep-link from staff dashboard) */
+  initialQuery?: string;
   placeholder?: string;
   required?: boolean;
 };
@@ -29,10 +31,11 @@ export default function PatronCombobox({
   name = 'borrowerIdentifier',
   nameOfName = 'borrowerName',
   onSelect,
+  initialQuery = '',
   placeholder = 'Type name, student ID, or email…',
   required = true,
 }: PatronComboboxProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<PatronOption[]>([]);
   const [selected, setSelected] = useState<PatronOption | null>(null);
   const [open, setOpen] = useState(false);
@@ -82,6 +85,11 @@ export default function PatronCombobox({
     }, 200);
     return () => clearTimeout(handle);
   }, [query, selected, runSearch]);
+
+  useEffect(() => {
+    if (selected) return;
+    setQuery(initialQuery);
+  }, [initialQuery, selected]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -145,6 +153,7 @@ export default function PatronCombobox({
           value={query}
           placeholder={placeholder}
           autoComplete="off"
+          suppressHydrationWarning
           onChange={(e) => {
             if (selected) setSelected(null);
             setQuery(e.target.value);
@@ -162,6 +171,7 @@ export default function PatronCombobox({
           <button
             type="button"
             onClick={clear}
+            suppressHydrationWarning
             className="rounded-pill border border-hairline dark:border-dark-hairline px-2 py-0.5 font-sans text-caption-uppercase font-semibold text-muted dark:text-on-dark-soft transition hover:text-primary dark:hover:text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Clear

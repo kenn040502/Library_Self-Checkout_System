@@ -14,14 +14,15 @@ export default async function ReturningBooksPage({
 }) {
   const { user } = await getDashboardSession();
   const role = user?.role ?? 'user';
-  const canProcessReturns = role === 'staff' || role === 'admin';
+  const canManageReturns = role === 'staff' || role === 'admin';
+  const canProcessReturns = canManageReturns;
 
   const params = searchParams ? await searchParams : undefined;
   const raw = params?.q;
   const searchTerm = Array.isArray(raw) ? raw[0]?.trim() ?? '' : raw?.trim() ?? '';
 
   const [activeLoans, summary] = await Promise.all([
-    fetchActiveLoans(searchTerm, canProcessReturns ? undefined : user?.id),
+    fetchActiveLoans(searchTerm, canManageReturns ? undefined : user?.id),
     fetchDashboardSummary(),
   ]);
 
@@ -34,15 +35,17 @@ export default async function ReturningBooksPage({
       <AdminShell
         titleSubtitle="Check In"
         title="Return Books"
-        description={canProcessReturns
+        description={canManageReturns
           ? 'Record completed loans and reconcile returned items with the inventory.'
-          : 'Review which books are currently on loan before speaking with library staff.'}
+          : 'Bring your book to the library service desk (Level 1) so staff can record the return.'}
       >
         <div className="space-y-6">
           <div className="flex flex-wrap items-center gap-3">
             <SearchForm
               action="/dashboard/book/checkin"
-              placeholder="Search borrowed books by borrower, ID, or title"
+              placeholder={canManageReturns
+                ? 'Search borrowed books by borrower, ID, or title'
+                : 'Search your loans by title'}
               defaultValue={searchTerm}
               aria-label="Search borrowed books"
               className="flex-1 min-w-0"
@@ -52,7 +55,12 @@ export default async function ReturningBooksPage({
           </div>
 
           {canProcessReturns ? (
-            <CheckInForm activeLoanCount={totalBorrowed} defaultIdentifier={searchTerm} />
+            <CheckInForm
+              activeLoanCount={totalBorrowed}
+              defaultIdentifier={searchTerm}
+              allowPatronLookup={canManageReturns}
+              allowBulkMode={canManageReturns}
+            />
           ) : (
             <>
               {/* Returning status — loans due within 48h or overdue */}

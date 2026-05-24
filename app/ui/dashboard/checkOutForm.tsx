@@ -15,6 +15,10 @@ import TransactionReceipt from '@/app/ui/dashboard/primitives/TransactionReceipt
 interface CheckOutFormProps {
   books: Book[];
   defaultDueDate: string;
+  /** When true, opens the camera scanner modal once on mount. */
+  autoOpenScanner?: boolean;
+  /** Optional initial patron search text (staff shortcut) */
+  initialPatronQuery?: string;
   preSelectedBookId?: string;
   /** When true, hides borrower fields and uses selfUserId/selfUserName as hidden inputs */
   selfCheckout?: boolean;
@@ -33,6 +37,8 @@ interface CheckOutFormProps {
 export default function CheckOutForm({
   books,
   defaultDueDate,
+  autoOpenScanner = false,
+  initialPatronQuery = '',
   preSelectedBookId,
   selfCheckout,
   selfUserId,
@@ -267,6 +273,7 @@ export default function CheckOutForm({
         }}
         modalDescription="Align the book barcode or ISBN within the frame."
         lastScanPrefix="Latest scan:"
+        autoOpen={autoOpenScanner}
         className="w-full"
       />
 
@@ -349,10 +356,10 @@ export default function CheckOutForm({
               </span>
             </div>
           </>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            <PatronCombobox onSelect={setPickedPatron} />
-            <div>
+	        ) : (
+	          <div className="grid gap-4 md:grid-cols-2">
+	            <PatronCombobox onSelect={setPickedPatron} initialQuery={initialPatronQuery} />
+	            <div>
               <label className="mb-1.5 block font-sans text-caption-uppercase font-semibold text-muted dark:text-on-dark-soft">
                 Due date
               </label>
