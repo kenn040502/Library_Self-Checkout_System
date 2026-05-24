@@ -189,6 +189,7 @@ export default function DesktopTopBar({ user, isBypassed }: DesktopTopBarProps) 
           aria-label="Notifications"
           aria-expanded={isOpen}
           onClick={() => setIsOpen((v) => !v)}
+          suppressHydrationWarning
           className={clsx(
             'relative flex h-8 w-8 items-center justify-center rounded-xl border transition',
             isOpen

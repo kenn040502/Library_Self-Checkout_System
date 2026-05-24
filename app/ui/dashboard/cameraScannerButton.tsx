@@ -36,6 +36,8 @@ type CameraScannerButtonProps = {
   modalTitle?: string;
   modalDescription?: string;
   lastScanPrefix?: string;
+  /** When true, opens the scanner modal once on mount. */
+  autoOpen?: boolean;
   className?: string;
 };
 
@@ -50,6 +52,7 @@ export default function CameraScannerButton({
   modalTitle = 'Scan barcode',
   modalDescription = 'Point your camera at the barcode. We\u2019ll capture it automatically.',
   lastScanPrefix = 'Last scan',
+  autoOpen = false,
   className,
 }: CameraScannerButtonProps) {
   const router = useRouter();
@@ -70,6 +73,7 @@ export default function CameraScannerButton({
   const [manualOpen, setManualOpen] = useState(false);
   const [manualValue, setManualValue] = useState('');
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
+  const didAutoOpenRef = useRef(false);
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const modalUploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -131,6 +135,13 @@ export default function CameraScannerButton({
     );
     void refreshDeviceOptions();
   }, [open, refreshDeviceOptions, addLog]);
+
+  useEffect(() => {
+    if (!autoOpen) return;
+    if (didAutoOpenRef.current) return;
+    didAutoOpenRef.current = true;
+    setOpen(true);
+  }, [autoOpen]);
 
   // Escape to close
   useEffect(() => {
@@ -236,11 +247,12 @@ export default function CameraScannerButton({
       <div className={clsx('flex flex-col gap-3', className)}>
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-3">
         {/* Primary: Scan with camera */}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="group relative flex w-full flex-1 items-center gap-3 overflow-hidden rounded-card bg-primary px-3.5 py-3 text-left text-on-primary transition hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-        >
+	        <button
+	          type="button"
+	          onClick={() => setOpen(true)}
+	          suppressHydrationWarning
+	          className="group relative flex w-full flex-1 items-center gap-3 overflow-hidden rounded-card bg-primary px-3.5 py-3 text-left text-on-primary transition hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+	        >
           <span
             aria-hidden="true"
             className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-on-primary/10 blur-sm transition group-hover:scale-110"
@@ -263,11 +275,12 @@ export default function CameraScannerButton({
         </button>
 
         {/* Secondary: Upload a photo (same coral as Scan) */}
-        <button
-          type="button"
-          onClick={() => uploadInputRef.current?.click()}
-          className="group relative flex w-full flex-1 items-center gap-3 overflow-hidden rounded-card bg-primary px-3.5 py-3 text-left text-on-primary transition hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-        >
+	        <button
+	          type="button"
+	          onClick={() => uploadInputRef.current?.click()}
+	          suppressHydrationWarning
+	          className="group relative flex w-full flex-1 items-center gap-3 overflow-hidden rounded-card bg-primary px-3.5 py-3 text-left text-on-primary transition hover:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+	        >
           <span
             aria-hidden="true"
             className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-on-primary/10 blur-sm transition group-hover:scale-110"

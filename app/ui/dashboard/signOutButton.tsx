@@ -31,6 +31,7 @@ export default function SignOutButton({
       type="button"
       onClick={handleClick}
       disabled={pending}
+      suppressHydrationWarning
       className={clsx(
         className ?? DEFAULT_CLASS_NAME,
         'transition disabled:cursor-not-allowed',

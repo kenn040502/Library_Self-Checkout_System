@@ -125,6 +125,7 @@ export default function SideNav({ user, isBypassed, collapsed = false, onToggle 
         <button
           type="button"
           onClick={onToggle}
+          suppressHydrationWarning
           aria-label="Expand sidebar"
           title="Expand sidebar"
           className="mx-auto mb-2 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-btn border border-hairline bg-surface-card text-body transition hover:bg-surface-cream-strong hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark/70 dark:hover:bg-dark-surface-strong dark:hover:text-on-dark dark:focus-visible:ring-offset-dark-canvas"
@@ -142,6 +143,7 @@ export default function SideNav({ user, isBypassed, collapsed = false, onToggle 
             <button
               type="button"
               onClick={onToggle}
+              suppressHydrationWarning
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
               className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-btn text-muted-soft transition hover:bg-surface-cream-strong hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:text-on-dark/60 dark:hover:bg-dark-surface-strong dark:hover:text-on-dark dark:focus-visible:ring-offset-dark-canvas"

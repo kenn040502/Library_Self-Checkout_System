@@ -73,6 +73,8 @@ export default function StaffDashboard({
 }: StaffDashboardProps) {
   const router = useRouter();
   const [scanInput, setScanInput] = useState('');
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [processingScan, setProcessingScan] = useState(false);
   const firstName = userName?.split(' ')[0] ?? 'Staff';
   const h = new Date().getHours();
   const tod = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
@@ -88,11 +90,83 @@ export default function StaffDashboard({
 
   const activity = recentLoans.map((loan) => ({ id: loan.id, ...formatActivity(loan) }));
 
+  const isBarcodeLike = (value: string) => /^swi[-\s]?/i.test(value) || /^\d{6,}$/.test(value);
+
+  const normalizedQuery = scanInput.trim().toLowerCase();
+  const matchesKnownItem = (() => {
+    if (!normalizedQuery) return false;
+
+    const matchesBarcode = recentLoans.some((loan) => {
+      const barcode = loan.copy?.barcode?.trim().toLowerCase();
+      return Boolean(barcode) && barcode === normalizedQuery;
+    });
+    if (matchesBarcode) return true;
+
+    const matchesPatron = [
+      ...recentLoans.map((loan) => loan.borrowerName ?? ''),
+      ...readyHolds.map((hold) => hold.patron ?? ''),
+    ].some((name) => name.trim().toLowerCase() === normalizedQuery);
+
+    return matchesPatron;
+  })();
+
+  const canProcessQuery = normalizedQuery.length > 0 && (isBarcodeLike(normalizedQuery) || matchesKnownItem);
+
   const handleScan = (mode: 'checkout' | 'checkin') => {
     const q = scanInput.trim();
+    if (!q) {
+      setScanError('Enter a patron name or a book barcode first.');
+      return;
+    }
+    if (!isBarcodeLike(q) && !matchesKnownItem) {
+      setScanError('No match found in the list below. Check spelling or scan again.');
+      return;
+    }
+    setScanError(null);
+    const isBarcode = isBarcodeLike(q);
     const target = mode === 'checkout' ? '/dashboard/book/checkout' : '/dashboard/book/checkin';
-    const href = q ? `${target}?q=${encodeURIComponent(q)}` : target;
+    const href =
+      mode === 'checkout' && !isBarcode
+        ? `${target}?patron=${encodeURIComponent(q)}`
+        : q
+          ? `${target}?q=${encodeURIComponent(q)}`
+          : target;
     router.push(href);
+  };
+
+  const handleAutoProcess = async () => {
+    const q = scanInput.trim();
+    if (!q) {
+      setScanError('Enter a patron name or a book barcode first.');
+      return;
+    }
+
+    if (!isBarcodeLike(q)) {
+      if (!matchesKnownItem) {
+        setScanError('No match found in the list below. Check spelling or scan again.');
+        return;
+      }
+      setScanError(null);
+      router.push(`/dashboard/book/checkout?patron=${encodeURIComponent(q)}`);
+      return;
+    }
+
+    setProcessingScan(true);
+    try {
+      const res = await fetch(`/api/loans/active-by-barcode?barcode=${encodeURIComponent(q)}`);
+      if (!res.ok) {
+        setScanError('Unable to verify that barcode. Try again or use Checkout/Return.');
+        return;
+      }
+      const data = (await res.json()) as { active?: boolean };
+      const target = data.active ? '/dashboard/book/checkin' : '/dashboard/book/checkout';
+      setScanError(null);
+      router.push(`${target}?q=${encodeURIComponent(q)}`);
+    } catch {
+      setScanError('Unable to verify that barcode. Try again or use Checkout/Return.');
+    } finally {
+      setProcessingScan(false);
+    }
   };
 
   return (
@@ -102,7 +176,7 @@ export default function StaffDashboard({
       description="Process borrowals and returns. Scan a barcode or search by patron name."
       primaryAction={
         <Link
-          href="/dashboard/book/checkout"
+          href="/dashboard/book/checkout?scan=camera"
           className="inline-flex h-10 items-center gap-1.5 rounded-btn bg-primary px-4 font-sans text-button text-on-primary transition hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
         >
           <QrCodeIcon className="h-4 w-4" />
@@ -124,44 +198,55 @@ export default function StaffDashboard({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              handleScan('checkout');
             }}
             suppressHydrationWarning
-            className="relative flex items-center gap-2.5 rounded-btn border border-on-primary/25 bg-on-primary/15 py-1 pl-3.5 pr-1.5"
+            className="relative flex flex-wrap items-center gap-2.5 rounded-btn border border-on-primary/25 bg-on-primary/15 py-1 pl-3.5 pr-1.5"
           >
-            <QrCodeIcon className="h-4 w-4 opacity-80" />
+            <QrCodeIcon className="h-4 w-4 flex-shrink-0 opacity-80" />
             <label htmlFor="staff-scan" className="sr-only">Scan barcode or type SWI code</label>
             <input
               id="staff-scan"
               value={scanInput}
-              onChange={(e) => setScanInput(e.target.value)}
+	              onChange={(e) => {
+	                setScanInput(e.target.value);
+	                if (scanError) setScanError(null);
+	              }}
               placeholder="Scan barcode or type SWI-xxxxx…"
               autoComplete="off"
               suppressHydrationWarning
-              className="flex-1 bg-transparent font-sans text-body-sm text-on-primary placeholder:text-on-primary/55 outline-none"
+              className="min-w-[10ch] flex-1 bg-transparent font-sans text-body-sm text-on-primary placeholder:text-on-primary/55 outline-none"
             />
             <button
-              type="submit"
+              type="button"
+              onClick={() => void handleAutoProcess()}
+              disabled={!canProcessQuery || processingScan}
               suppressHydrationWarning
-              className="inline-flex h-9 items-center rounded-btn bg-on-primary px-4 font-sans text-button text-primary transition hover:bg-on-primary/90"
+              className="inline-flex h-9 w-full sm:w-auto flex-shrink-0 items-center justify-center rounded-btn bg-on-primary px-4 font-sans text-button text-primary transition hover:bg-on-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Process
+              {processingScan ? 'Checking\u2026' : 'Process'}
             </button>
           </form>
-          <div className="relative mt-3.5 flex gap-2">
+	          {scanError ? (
+	            <p className="relative mt-2 font-sans text-body-sm font-medium text-on-primary/85">
+	              {scanError}
+	            </p>
+	          ) : null}
+	          <div className="relative mt-3.5 flex gap-2">
             <button
               type="button"
               onClick={() => handleScan('checkout')}
+              disabled={!canProcessQuery || processingScan}
               suppressHydrationWarning
-              className="rounded-btn border border-on-primary/25 bg-on-primary/15 px-3 py-1.5 font-sans text-caption-uppercase transition hover:bg-on-primary/25"
+              className="rounded-btn border border-on-primary/25 bg-on-primary/15 px-3 py-1.5 font-sans text-caption-uppercase transition hover:bg-on-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
             >
               Checkout
             </button>
             <button
               type="button"
               onClick={() => handleScan('checkin')}
+              disabled={!canProcessQuery || processingScan}
               suppressHydrationWarning
-              className="rounded-btn border border-on-primary/25 bg-on-primary/15 px-3 py-1.5 font-sans text-caption-uppercase transition hover:bg-on-primary/25"
+              className="rounded-btn border border-on-primary/25 bg-on-primary/15 px-3 py-1.5 font-sans text-caption-uppercase transition hover:bg-on-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
             >
               Return
             </button>
