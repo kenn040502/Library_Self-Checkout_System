@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireStaff } from '@/auth';
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
+import { callDeepSeekJson } from '@/app/lib/ai/deepseek';
 
 type MinimalBook = {
   id: string;
@@ -19,7 +20,7 @@ const FACULTY_TAGS = [
 
 type TagName = (typeof FACULTY_TAGS)[number];
 
-// OpenAI fallback (used when Gemini is unavailable/quotaed)
+// OpenAI fallback (used when DeepSeek is unavailable/quotaed)
 const getOpenAIEnv = () => {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim();
@@ -156,31 +157,6 @@ function inferFallbackTag(book: MinimalBook): TagName {
   return 'engineering';
 }
 
-const getGeminiEnv = () => {
-  const rawBase =
-    process.env.GEMINI_API_BASE_URL?.trim() ||
-    'https://generativelanguage.googleapis.com';
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  const apiKeys = (process.env.GEMINI_API_KEYS || '')
-    .split(',')
-    .map((k) => k.trim())
-    .filter(Boolean);
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-1.5-flash';
-
-  const needsBeta = model.startsWith('gemini-2');
-  const apiVersion = needsBeta ? 'v1beta' : 'v1';
-  const baseRoot = rawBase.replace(/\/?(v1|v1beta)\/?$/i, '');
-  const baseUrl = `${baseRoot.replace(/\/+$/, '')}/${apiVersion}`;
-
-  // Also prepare the alternate version URL so we can fail over (v1 <-> v1beta).
-  const altVersion = apiVersion === 'v1' ? 'v1beta' : 'v1';
-  const altBaseUrl = `${baseRoot.replace(/\/+$/, '')}/${altVersion}`;
-
-  const keys = apiKeys.length > 0 ? apiKeys : apiKey ? [apiKey] : [];
-
-  return { baseUrl, altBaseUrl, apiKey, apiKeys: keys, model, needsBeta };
-};
-
 const normalizeTags = (tags: string[]): string[] =>
   Array.from(
     new Set(
@@ -284,99 +260,24 @@ const buildPrompt = (books: MinimalBook[]): string => {
   ].join('\n');
 };
 
-async function callGemini(books: MinimalBook[]): Promise<Record<string, string[]>> {
-  const { baseUrl, altBaseUrl, apiKeys, model, needsBeta } = getGeminiEnv();
-  if (apiKeys.length === 0) throw new Error('GEMINI_API_KEY missing');
+async function callDeepSeek(books: MinimalBook[]): Promise<Record<string, string[]>> {
+  const systemPrompt = 'You are a librarian assistant. Respond only with valid JSON as instructed.';
 
-  const fallbackModels = needsBeta
-    ? [model, 'gemini-2.0-flash']
-    : [model, 'gemini-1.5-flash'];
-  const models = Array.from(new Set(fallbackModels));
-  const baseUrls = Array.from(new Set([baseUrl, altBaseUrl]));
+  const res = await callDeepSeekJson(systemPrompt, buildPrompt(books), { temperature: 0.2, maxTokens: 512 });
 
-  const body = {
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: buildPrompt(books) }],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.2,
-    },
-  };
+  if (!res.ok) throw new Error(`DeepSeek request failed: ${res.kind}`);
 
-  const backoff = (attempt: number) =>
-    new Promise((resolve) => setTimeout(resolve, Math.min(2000, 400 * attempt)));
-
-  let lastError: Error | null = null;
-
-  for (const key of apiKeys) {
-    for (const base of baseUrls) {
-      for (const m of models) {
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          const url = `${base.replace(/[/]+$/, '')}/models/${encodeURIComponent(
-            m,
-          )}:generateContent?key=${encodeURIComponent(key)}`;
-
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-
-          const raw = await response.json().catch(async () => ({
-            fallbackText: await response.text(),
-          }));
-
-          if (!response.ok) {
-            const errText = typeof raw === 'string' ? raw : JSON.stringify(raw);
-            lastError = new Error(`Gemini error ${response.status}: ${errText}`);
-
-            // retry on 5xx; skip to next base/model on 404; advance key/model on 429
-            if (response.status >= 500) {
-              await backoff(attempt + 1);
-              continue;
-            } else if (response.status === 404) {
-              break; // move to next model or base
-            } else if (response.status === 429 || response.status === 403) {
-              break; // move to next model/key
-            } else {
-              break;
-            }
-          }
-
-          const text: string =
-            raw?.candidates?.[0]?.content?.parts?.[0]?.text ?? raw?.fallbackText ?? '';
-
-          if (!text) {
-            lastError = new Error('Gemini returned empty response');
-            await backoff(attempt + 1);
-            continue;
-          }
-
-          try {
-            return JSON.parse(text) as Record<string, string[]>;
-          } catch {
-            const match = text.match(/\{[\s\S]*\}/);
-            if (match) return JSON.parse(match[0]) as Record<string, string[]>;
-            lastError = new Error('Gemini returned non-JSON');
-            await backoff(attempt + 1);
-          }
-        }
-      }
-    }
-  }
-
-  throw lastError ?? new Error('Gemini request failed');
+  const data = res.data as Record<string, string[]> | null;
+  if (!data || typeof data !== 'object') throw new Error('DeepSeek returned non-object JSON');
+  return data;
 }
 
 async function callLLMWithFallback(books: MinimalBook[]): Promise<Record<string, string[]>> {
-  // Try Gemini (may rotate across keys/models/bases), then OpenAI, then heuristic.
+  // Try DeepSeek first, then OpenAI fallback, then heuristic.
   try {
-    return await callGemini(books);
+    return await callDeepSeek(books);
   } catch (err) {
-    console.warn('[auto-tag] gemini failed, trying openai', err);
+    console.warn('[auto-tag] deepseek failed, trying openai', err);
     try {
       return await callOpenAI(books);
     } catch (err2) {
@@ -433,14 +334,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     const bookId: string | null = body?.bookId ?? null;
     const retag: boolean = Boolean(body?.retag);
-
-    const { apiKey } = getGeminiEnv();
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'GEMINI_API_KEY is missing. Set it in your .env and restart the dev server.' },
-        { status: 400 },
-      );
-    }
 
     const books = await loadBooksToTag(bookId, retag);
 

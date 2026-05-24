@@ -31,11 +31,39 @@ test('renders today date and loan_status rule when called with empty extras', ()
   expect(prompt).toMatch(/loan_status/);
 });
 
+test('uses the classify-only JSON contract — no reply field, includes faqSection', () => {
+  const prompt = buildUnifiedSystemPrompt(undefined, [], [], new Date('2026-05-07T00:00:00Z'));
+  expect(prompt).toMatch(/Do NOT include a "reply" field/);
+  expect(prompt).toContain('"faqSection"');
+  expect(prompt).not.toContain('"reply":');
+});
+
+test('carries the anti-injection clause and embedded FAQ content', () => {
+  const prompt = buildUnifiedSystemPrompt(undefined, [], [], new Date('2026-05-07T00:00:00Z'));
+  expect(prompt).toMatch(/untrusted input/i);
+  expect(prompt).toMatch(/# FAQ/);
+  // a real FAQ section title from studentFaqData
+  expect(prompt).toContain('How to Borrow a Book');
+});
+
+test('renders sanitized student profile fields (faculty, study year, interests, recent titles)', () => {
+  const prompt = buildUnifiedSystemPrompt(
+    { faculty: 'Information Technology', department: null, studyYear: 2, interestTags: ['databases'], recentBookTitles: ['Clean Code'] },
+    [],
+    [],
+    new Date('2026-05-07T00:00:00Z'),
+  );
+  expect(prompt).toContain('Faculty: Information Technology');
+  expect(prompt).toContain('Study year: Year 2');
+  expect(prompt).toContain('databases');
+  expect(prompt).toContain('"Clean Code"');
+});
+
 test('renders Currently borrowed block with due-date countdown', () => {
   const today = new Date('2026-05-07T00:00:00Z');
   const loans: Loan[] = [
-    makeLoan({ book: { id: 'b1', title: 'Sapiens', author: 'Yuval Harari', isbn: null, coverImageUrl: null, classification: null }, dueAt: '2026-05-09T00:00:00Z' }),
-    makeLoan({ id: 'l2', book: { id: 'b2', title: '1Q84', author: 'Haruki Murakami', isbn: null, coverImageUrl: null, classification: null }, dueAt: '2026-05-01T00:00:00Z' }),
+    makeLoan({ book: { id: 'b1', title: 'Sapiens', author: 'Yuval Harari', isbn: null }, dueAt: '2026-05-09T00:00:00Z' }),
+    makeLoan({ id: 'l2', book: { id: 'b2', title: '1Q84', author: 'Haruki Murakami', isbn: null }, dueAt: '2026-05-01T00:00:00Z' }),
   ];
 
   const prompt = buildUnifiedSystemPrompt(undefined, loans, [], today);
@@ -53,7 +81,7 @@ test('renders Recently returned block', () => {
       id: 'r1',
       status: 'returned',
       returnedAt: '2026-05-04T00:00:00Z',
-      book: { id: 'b3', title: 'The Hobbit', author: null, isbn: null, coverImageUrl: null, classification: null },
+      book: { id: 'b3', title: 'The Hobbit', author: null, isbn: null },
     }),
   ];
 

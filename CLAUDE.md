@@ -88,11 +88,12 @@ The app reads these without sensible defaults — the app will throw or refuse t
 - `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_TENANT_ID`, `NEXTAUTH_SECRET` (auto-set to `'dev-secret'` in development).
 - Optional dev bypass: `DEV_BYPASS_AUTH`, `DEV_BYPASS_ROLE` (`user`|`staff`|`admin`), `DEV_BYPASS_EMAIL`, `DEV_BYPASS_NAME`, `DEV_BYPASS_USER_ID`.
 - SIP2: `SIP2_BASE_URL`, `SIP2_API_KEY`, `SIP2_TIMEOUT_MS` (default 5000), `SIP2_INSTITUTION_ID`, `SIP2_TERMINAL_PASSWORD`, `SIP2_PATRON_PASSWORD`.
-- AI / LLM provider — Reading Assistant + recommendations are Gemini-only:
-  - `GEMINI_API_KEY` (required for any AI surface to work)
-  - `GEMINI_MODEL` (default `gemini-2.5-flash`)
-  - `GEMINI_API_BASE_URL` (optional override)
-  - `app/lib/recommendations/ai.ts` is the single provider entrypoint. There's no local-LLM fallback anymore.
+- AI / LLM provider — DeepSeek is the only LLM provider (server-only):
+  - `DEEPSEEK_API_KEY` (required for any AI surface to work; server-only)
+  - `DEEPSEEK_MODEL` (default `deepseek-v4-flash`)
+  - `DEEPSEEK_API_BASE_URL` (default `https://api.deepseek.com`)
+  - `DEEPSEEK_TIMEOUT_MS` (default 15000), `DEEPSEEK_STREAM_TIMEOUT_MS` (default 30000)
+  - `app/lib/ai/deepseek.ts` is the single LLM client (`callDeepSeekJson` / `streamDeepSeekText`). `app/lib/recommendations/ai.ts` is a thin library-domain layer over it: a classify pass (JSON) and a streaming-answer pass (SSE text). `/api/reading-assistant` is a `text/event-stream` endpoint — not JSON.
 - LinkedIn Learning (optional, has stub mode): `LINKEDIN_LEARNING_*` — set `LINKEDIN_LEARNING_USE_STUB=true` to use the bundled sample catalogue. See `README.md` for the full list.
 - Optional LinkedIn auth provider: `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` (only enables the provider when both are set).
 - Optional MCP recommendations: `MCP_RECOMMENDATIONS_ENABLED=false` (toggle), `MCP_SERVER_COMMAND`, `MCP_SERVER_ARGS` (defaults to `["mcp/server.mjs"]`).
@@ -102,5 +103,6 @@ The app reads these without sensible defaults — the app will throw or refuse t
 - Tailwind tokens are domain-specific (`bg-canvas`, `text-ink`, `bg-dark-canvas`, `text-on-dark`, swin-* legacy colors, plus the warm-canvas palette in `DESIGN.md`). Reuse tokens; don't introduce raw hex values without checking `DESIGN.md` and `tailwind.config.ts`.
 - Server actions and API handlers should normalize email to lowercase before any DB lookup (matches what the auth callbacks store).
 - Never call SIP2 without a timeout — copy the `AbortController` pattern from `lib/sip2.ts`.
+- Never call the LLM without a timeout — `app/lib/ai/deepseek.ts` is the only place that talks to a model and it always uses an `AbortController` (same rule as SIP2).
 - When adding a protected route, update **both** `middleware.ts` (`protectedPrefixes` + `matcher`) and any role rule in `roleGuardRules`.
 - Several files at the auth boundary use `// @ts-nocheck` (`auth.ts`, `middleware.ts`) due to NextAuth beta typing churn — preserve this pragma when editing rather than fighting the types.

@@ -12,6 +12,8 @@ type Turn = {
   role: Role;
   text: string;
   books?: ReadingAssistantBook[];
+  basedOn?: string | null;
+  streaming?: boolean;
 };
 
 type ReadingAssistantProps = {
@@ -71,9 +73,15 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
       if (!message || busy) return;
 
       const userTurn: Turn = { id: makeId(), role: 'user', text: message };
-      setTurns((prev) => [...prev, userTurn]);
+      const assistantId = makeId();
+      setTurns((prev) => [...prev, userTurn, { id: assistantId, role: 'assistant', text: '', streaming: true }]);
       setDraft('');
       setBusy(true);
+
+      const patchAssistant = (patch: Partial<Turn>) =>
+        setTurns((prev) => prev.map((t) => (t.id === assistantId ? { ...t, ...patch } : t)));
+      const appendAssistant = (chunk: string) =>
+        setTurns((prev) => prev.map((t) => (t.id === assistantId ? { ...t, text: t.text + chunk } : t)));
 
       try {
         const res = await fetch('/api/reading-assistant', {
@@ -81,28 +89,43 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const { reply, books } = (await res.json()) as {
-          reply: string;
-          books?: ReadingAssistantBook[];
-          intent: string;
-        };
-        const assistantTurn: Turn = {
-          id: makeId(),
-          role: 'assistant',
-          text: reply,
-          books,
-        };
-        setTurns((prev) => [...prev, assistantTurn]);
+        if (!res.ok || !res.body) {
+          const errText = res.status === 400 ? 'That message is a bit long — please shorten it.' : "Sorry — I couldn't reach the assistant just now. Please try again, or ask a librarian directly.";
+          patchAssistant({ text: errText, streaming: false });
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let sep: number;
+          while ((sep = buffer.indexOf('\n\n')) !== -1) {
+            const frame = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            const eventLine = frame.split('\n').find((l) => l.startsWith('event:'));
+            const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
+            if (!eventLine) continue;
+            const event = eventLine.slice(6).trim();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let data: Record<string, any> = {};
+            if (dataLine) {
+              try { data = JSON.parse(dataLine.slice(5).trim()); }
+              catch { continue; }
+            }
+            if (event === 'delta' && typeof data.text === 'string') appendAssistant(data.text);
+            else if (event === 'meta') patchAssistant({ books: data.books, basedOn: data.faqSection ?? null });
+            else if (event === 'error') patchAssistant({ text: data.message ?? 'Something went wrong.', books: data.books ?? [], streaming: false });
+            else if (event === 'done') patchAssistant({ streaming: false });
+          }
+        }
+        patchAssistant({ streaming: false });
       } catch (err) {
-        console.error('[reading-assistant] send error:', err);
-        const errorTurn: Turn = {
-          id: makeId(),
-          role: 'assistant',
-          text:
-            "Sorry — I couldn't reach the AI just now. Please try again in a moment, or ask a librarian directly.",
-        };
-        setTurns((prev) => [...prev, errorTurn]);
+        console.error('[reading-assistant] stream error:', err);
+        patchAssistant({ text: "Sorry — the connection dropped. Please try again, or ask a librarian directly.", streaming: false });
       } finally {
         setBusy(false);
       }
@@ -163,9 +186,8 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
           </p>
         )}
         {turns.map((t) => (
-          <MessageBubble key={t.id} role={t.role} text={t.text} books={t.books} />
+          <MessageBubble key={t.id} role={t.role} text={t.text} books={t.books} streaming={t.streaming} basedOn={t.basedOn} />
         ))}
-        {busy && <MessageBubble role="assistant" text="" loading />}
       </div>
 
       <div className="mt-4">

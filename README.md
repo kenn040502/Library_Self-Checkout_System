@@ -116,17 +116,24 @@ NEXTAUTH_URL=http://localhost:3000
 AUTH_URL=http://localhost:3000/api/auth
 ```
 
-### AI Recommendation Providers
+### AI / LLM Provider (DeepSeek)
+
+DeepSeek is the only LLM provider. `DEEPSEEK_API_KEY` is server-only. `/api/reading-assistant` returns an SSE `text/event-stream`, not JSON.
 
 ```env
-LLM_PROVIDER=lmstudio
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_API_BASE_URL=https://api.deepseek.com
+DEEPSEEK_TIMEOUT_MS=15000
+DEEPSEEK_STREAM_TIMEOUT_MS=30000
+```
 
-LMSTUDIO_BASE_URL=http://localhost:1234/v1
-LMSTUDIO_MODEL=google/gemma-4-e4b
+OpenAI is an optional fallback for `book/auto-tag` only:
 
-GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
+```env
+OPENAI_API_KEY=
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 ### LinkedIn Learning

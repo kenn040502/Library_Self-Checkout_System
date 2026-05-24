@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { retrieveCandidateBooks } from '@/app/lib/recommendations/retrieve';
 import type { Book } from '@/app/lib/supabase/types';
+import { callDeepSeekJson } from '@/app/lib/ai/deepseek';
 
 type StageBook = {
   id: string;
@@ -20,14 +21,6 @@ type Stage = {
 type LearningPathRequest = {
   topic?: string;
 };
-
-const getEnv = () => ({
-  geminiApiKey: process.env.GEMINI_API_KEY?.trim(),
-  geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
-  geminiBaseUrl:
-    process.env.GEMINI_API_BASE_URL?.trim() ||
-    'https://generativelanguage.googleapis.com/v1beta',
-});
 
 const toStageBook = (book: Book, reason: string): StageBook => ({
   id: book.id,
@@ -67,17 +60,16 @@ const fallbackSplit = (books: Book[]): Stage[] => {
   return stages.filter((stage) => stage.books.length > 0);
 };
 
-type GeminiBookEntry = {
+type LLMBookEntry = {
   stage: 'beginner' | 'intermediate' | 'advanced';
   reason: string;
 };
 
-const assignWithGemini = async (
+const assignWithLLM = async (
   topic: string,
   books: Book[],
 ): Promise<Stage[] | null> => {
-  const { geminiApiKey, geminiModel, geminiBaseUrl } = getEnv();
-  if (!geminiApiKey || !books.length) return null;
+  if (!books.length) return null;
 
   const keyMap: Record<string, Book> = {};
   const bookList = books
@@ -89,54 +81,27 @@ const assignWithGemini = async (
     })
     .join('\n');
 
-  const prompt = [
-    `Topic: ${topic}`,
-    '',
-    'Classify each book below into exactly one stage: "beginner", "intermediate", or "advanced".',
+  const systemPrompt = [
+    'You are a librarian assistant that classifies books by difficulty level.',
+    'Classify each book into exactly one stage: "beginner", "intermediate", or "advanced".',
     'Write a ONE sentence reason (max 15 words) explaining why it fits that stage.',
     'Return ONLY valid JSON: {"b0": {"stage": "beginner", "reason": "..."}, ...}',
     'No extra text.',
+  ].join('\n');
+
+  const userMessage = [
+    `Topic: ${topic}`,
     '',
     'Books:',
     bookList,
   ].join('\n');
 
-  const url = `${geminiBaseUrl.replace(/\/+$/, '')}/models/${encodeURIComponent(geminiModel)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+  const res = await callDeepSeekJson(systemPrompt, userMessage, { temperature: 0.2, maxTokens: 1024 });
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2 },
-    }),
-  });
+  if (!res.ok) return null;
 
-  if (!res.ok) throw new Error(`Gemini ${res.status}`);
-
-  const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-
-  const text =
-    data?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-  if (!text.trim()) return null;
-
-  let parsed: Record<string, GeminiBookEntry> | null = null;
-  try {
-    parsed = JSON.parse(text.trim()) as Record<string, GeminiBookEntry>;
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        parsed = JSON.parse(match[0]) as Record<string, GeminiBookEntry>;
-      } catch {
-        return null;
-      }
-    }
-  }
-
-  if (!parsed) return null;
+  const parsed = res.data as Record<string, LLMBookEntry> | null;
+  if (!parsed || typeof parsed !== 'object') return null;
 
   const beginner: StageBook[] = [];
   const intermediate: StageBook[] = [];
@@ -144,7 +109,7 @@ const assignWithGemini = async (
 
   for (const [key, entry] of Object.entries(parsed)) {
     const book = keyMap[key];
-    if (!book) continue;
+    if (!book || typeof entry !== 'object' || !entry) continue;
     const stageBook = toStageBook(book, entry.reason ?? 'Recommended for this level');
     if (entry.stage === 'beginner') beginner.push(stageBook);
     else if (entry.stage === 'intermediate') intermediate.push(stageBook);
@@ -185,9 +150,9 @@ export async function POST(request: Request) {
     let stages: Stage[] | null = null;
 
     try {
-      stages = await assignWithGemini(topic, books);
+      stages = await assignWithLLM(topic, books);
     } catch (err) {
-      console.warn('[learning-path] Gemini failed, using fallback', err);
+      console.warn('[learning-path] LLM failed, using fallback', err);
     }
 
     if (!stages || !stages.length) {

@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
+import { READING_ASSISTANT_MAX_MESSAGE_CHARS } from '@/app/lib/recommendations/policy';
 
 type ComposerProps = {
   value: string;
@@ -9,6 +10,8 @@ type ComposerProps = {
   onSubmit: () => void;
   disabled?: boolean;
 };
+
+const COUNTER_THRESHOLD = READING_ASSISTANT_MAX_MESSAGE_CHARS - 200;
 
 export default function Composer({ value, onChange, onSubmit, disabled }: ComposerProps) {
   const taRef = useRef<HTMLTextAreaElement | null>(null);
@@ -21,19 +24,28 @@ export default function Composer({ value, onChange, onSubmit, disabled }: Compos
   };
 
   const canSend = !disabled && value.trim().length > 0;
+  const showCounter = value.length >= COUNTER_THRESHOLD;
 
   return (
     <div className="mt-4 space-y-1.5">
-      <p className="px-1 font-sans text-caption text-muted-soft dark:text-on-dark-soft">
-        Powered by Gemini · Ask about loans, holds, books, fines.
-      </p>
+      <div className="flex items-center justify-between px-1">
+        <p className="font-sans text-caption text-muted-soft dark:text-on-dark-soft">
+          Powered by DeepSeek · Ask about loans, holds, books, fines.
+        </p>
+        {showCounter && (
+          <p className={clsxCounter(value.length)}>
+            {value.length} / {READING_ASSISTANT_MAX_MESSAGE_CHARS}
+          </p>
+        )}
+      </div>
       <div className="flex items-end gap-2 rounded-card border border-hairline bg-canvas p-2 dark:border-dark-hairline dark:bg-dark-canvas">
         <textarea
           ref={taRef}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value.slice(0, READING_ASSISTANT_MAX_MESSAGE_CHARS))}
           onKeyDown={handleKeyDown}
           rows={1}
+          maxLength={READING_ASSISTANT_MAX_MESSAGE_CHARS}
           placeholder="Type your question…"
           className="min-h-[40px] flex-1 resize-none border-0 bg-transparent px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus:outline-none focus:ring-0 dark:text-on-dark dark:placeholder:text-on-dark-soft"
           style={{ maxHeight: '160px' }}
@@ -51,4 +63,11 @@ export default function Composer({ value, onChange, onSubmit, disabled }: Compos
       </div>
     </div>
   );
+}
+
+function clsxCounter(len: number): string {
+  const base = 'font-sans text-caption tabular-nums';
+  return len >= READING_ASSISTANT_MAX_MESSAGE_CHARS
+    ? `${base} text-error`
+    : `${base} text-muted-soft dark:text-on-dark-soft`;
 }

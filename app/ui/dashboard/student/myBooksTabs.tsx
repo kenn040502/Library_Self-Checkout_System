@@ -230,7 +230,7 @@ export default function MyBooksTabs({
           role="tabpanel"
           id="my-books-panel-current"
           aria-labelledby="my-books-tab-current"
-          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2"
         >
           {filteredLoans.length === 0 ? (
             <div className="col-span-2 rounded-card border border-dashed border-hairline bg-surface-card p-10 text-center dark:border-dark-hairline dark:bg-dark-surface-card">

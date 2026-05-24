@@ -1,65 +1,93 @@
 /** @jest-environment node */
+export {};
 
 const fetchMock = jest.fn();
 (global as unknown as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
 
 beforeEach(() => {
   fetchMock.mockReset();
-  process.env.GEMINI_API_KEY = 'test-key';
-  process.env.GEMINI_MODEL = 'gemini-2.5-flash-lite';
-  process.env.GEMINI_API_BASE_URL = 'https://example.test/v1beta';
+  process.env.DEEPSEEK_API_KEY = 'test-key';
+  process.env.DEEPSEEK_MODEL = 'deepseek-v4-flash';
+  process.env.DEEPSEEK_API_BASE_URL = 'https://example.test';
+  process.env.DEEPSEEK_TIMEOUT_MS = '200';
   jest.resetModules();
 });
 
-const okResponse = (text: string) =>
+const chatResponse = (content: string) =>
   Promise.resolve({
     ok: true,
-    json: () => Promise.resolve({ candidates: [{ content: { parts: [{ text }] } }] }),
+    status: 200,
+    json: () => Promise.resolve({ choices: [{ message: { content } }] }),
+    text: () => Promise.resolve(content),
   } as unknown as Response);
 
-test('classifyAndExtract injects active loans + recent returns into systemInstruction', async () => {
-  fetchMock.mockReturnValueOnce(okResponse('{"intent":"loan_status","reply":"You have one due in 2 days","searchTerms":[],"followUpQuestion":""}'));
-  const ai = await import('@/app/lib/recommendations/ai');
-  const today = new Date('2026-05-07T00:00:00Z');
-
-  await ai.classifyAndExtract(
-    "what's due tomorrow?",
-    undefined,
-    [],
-    [
-      {
-        id: 'l1',
-        copyId: 'c1',
-        bookId: 'b1',
-        borrowerId: 'u1',
-        borrowerName: null,
-        borrowerEmail: null,
-        borrowerIdentifier: null,
-        borrowerRole: null,
-        handledBy: null,
-        status: 'borrowed',
-        borrowedAt: '2026-04-01T00:00:00Z',
-        dueAt: '2026-05-09T00:00:00Z',
-        returnedAt: null,
-        renewedCount: 0,
-        createdAt: null,
-        updatedAt: null,
-        book: { id: 'b1', title: 'Sapiens', author: 'Yuval Harari', isbn: null, coverImageUrl: null, classification: null },
-      },
-    ] as unknown as Parameters<typeof ai.classifyAndExtract>[3],
-    [],
-    today,
+test('classifyAndExtract returns the validated, classify-only shape', async () => {
+  fetchMock.mockReturnValueOnce(
+    chatResponse('{"intent":"find_books","searchTerms":["machine learning","AI"],"followUpQuestion":"Any authors?","faqSection":null}'),
   );
+  const ai = await import('@/app/lib/recommendations/ai');
+  const result = await ai.classifyAndExtract('give me AI books');
+  expect(result.intent).toBe('find_books');
+  expect(result.searchTerms).toEqual(expect.arrayContaining(['machine learning']));
+  expect(result.followUpQuestion).toBe('Any authors?');
+  expect(result.faqSection).toBeNull();
+  expect('reply' in result).toBe(false);
 
-  const [, init] = fetchMock.mock.calls[0];
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe('https://example.test/chat/completions');
   const body = JSON.parse((init as RequestInit).body as string);
-  expect(body.systemInstruction.parts[0].text).toContain('"Sapiens"');
-  expect(body.systemInstruction.parts[0].text).toMatch(/Today's date: 2026-05-07/);
+  expect(body.response_format).toEqual({ type: 'json_object' });
+  expect(body.messages[0].role).toBe('system');
+  expect(body.messages[0].content).toMatch(/untrusted input/i); // anti-injection clause present
 });
 
-test('classifyAndExtract returns loan_status intent verbatim', async () => {
-  fetchMock.mockReturnValueOnce(okResponse('{"intent":"loan_status","reply":"You have 1 book due","searchTerms":[],"followUpQuestion":""}'));
+test('classifyAndExtract coerces an illegal intent to find_books', async () => {
+  fetchMock.mockReturnValueOnce(chatResponse('{"intent":"weird","searchTerms":[]}'));
   const ai = await import('@/app/lib/recommendations/ai');
-  const result = await ai.classifyAndExtract("what's due?");
-  expect(result.intent).toBe('loan_status');
+  expect((await ai.classifyAndExtract('hello')).intent).toBe('find_books');
+});
+
+test('classifyAndExtract retries once on a 5xx then succeeds', async () => {
+  fetchMock
+    .mockReturnValueOnce(Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('x') } as unknown as Response))
+    .mockReturnValueOnce(chatResponse('{"intent":"greeting","searchTerms":[]}'));
+  const ai = await import('@/app/lib/recommendations/ai');
+  const result = await ai.classifyAndExtract('hi');
+  expect(result.intent).toBe('greeting');
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+test('classifyAndExtract throws AiUnavailableError after the retry also fails', async () => {
+  fetchMock
+    .mockReturnValueOnce(Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('x') } as unknown as Response))
+    .mockReturnValueOnce(Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('x') } as unknown as Response));
+  const ai = await import('@/app/lib/recommendations/ai');
+  await expect(ai.classifyAndExtract('hi')).rejects.toThrow(ai.AiUnavailableError);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+test('classifyAndExtract does NOT retry on an auth error', async () => {
+  fetchMock.mockReturnValueOnce(Promise.resolve({ ok: false, status: 401, text: () => Promise.resolve('bad key') } as unknown as Response));
+  const ai = await import('@/app/lib/recommendations/ai');
+  await expect(ai.classifyAndExtract('hi')).rejects.toThrow(ai.AiUnavailableError);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+test('classifyAndExtract injects sanitized loan titles but not PII', async () => {
+  fetchMock.mockReturnValueOnce(chatResponse('{"intent":"loan_status","searchTerms":[]}'));
+  const ai = await import('@/app/lib/recommendations/ai');
+  await ai.classifyAndExtract(
+    "what's due?",
+    {
+      faculty: 'Information Technology',
+      department: null,
+      intakeYear: 2024,
+      savedInterests: [],
+      historyTags: [],
+      recentBorrowedBooks: [{ title: 'Sapiens', author: 'Harari', borrowedAt: null }],
+    } as unknown as Parameters<typeof ai.classifyAndExtract>[1],
+  );
+  const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+  expect(body.messages[0].content).toContain('Sapiens');
+  expect(body.messages[0].content).toContain('Information Technology');
 });

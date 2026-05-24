@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { isSensitiveContent } from '@/app/lib/recommendations/guardrails';
-import { classifyAndExtract, suggestYouTubeCourses, facultyToCategory } from '@/app/lib/recommendations/ai';
+import {
+  classifyAndExtract,
+  suggestYouTubeCourses,
+  facultyToCategory,
+  streamLibraryAnswer,
+  buildPersonalizedSuggestion,
+  detectPresetIntent,
+} from '@/app/lib/recommendations/ai';
 import { retrieveCandidateBooks } from '@/app/lib/recommendations/retrieve';
 import {
   buildAssociationRules,
@@ -13,7 +20,6 @@ import { fetchUserContext, type UserContext } from '@/app/lib/recommendations/us
 type RecommendationRequest = {
   message?: string;
   limit?: number;
-  provider?: 'lmstudio' | 'gemini';
 };
 
 type RecommendationItem = {
@@ -31,6 +37,15 @@ type RateLimitEntry = {
   count: number;
   lastAt: number;
 };
+
+/** Drain a streamLibraryAnswer generator into a plain string. */
+async function collectAnswer(input: Parameters<typeof streamLibraryAnswer>[0]): Promise<string> {
+  let out = '';
+  for await (const ev of streamLibraryAnswer(input)) {
+    if (ev.type === 'delta') out += ev.text;
+  }
+  return out.trim();
+}
 
 const RATE_LIMIT_WINDOW_MS = 10_000;
 const RATE_LIMIT_MAX = 5;
@@ -170,8 +185,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Message is required.' }, { status: 400 });
   }
 
-  const provider = body.provider === 'gemini' ? 'gemini' : 'lmstudio';
-
   // Step 1: Rate limiting
   const clientKey = getClientKey(request);
   const now = Date.now();
@@ -229,7 +242,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           ok: true,
           kind: 'chat',
-          reply: aiResult.reply,
+          reply: 'Hi there! I can help you find books from the library catalog or answer academic questions. What are you looking for today?',
           recommendations: [],
           interests: [],
           summary: null,
@@ -241,7 +254,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           ok: true,
           kind: 'reject',
-          reply: aiResult.reply,
+          reply: 'Sorry, I cannot help with that topic. Feel free to ask about books or academic subjects.',
           recommendations: [],
           interests: [],
           summary: null,
@@ -251,20 +264,31 @@ export async function POST(request: Request) {
 
       case 'answer': {
         // Answer the question and try to find a few related books
-        const { items, youtube } = await findBooks(
-          aiResult.searchTerms.length ? aiResult.searchTerms : [message],
-          userContext,
-          3,
-        );
+        const [{ items, youtube }, answerText] = await Promise.all([
+          findBooks(
+            aiResult.searchTerms.length ? aiResult.searchTerms : [message],
+            userContext,
+            3,
+          ),
+          collectAnswer({
+            message,
+            intent: aiResult.intent,
+            faqSection: aiResult.faqSection ?? null,
+            bookTitles: [],
+            userContext,
+          }),
+        ]);
+
+        const reply = answerText || 'I was unable to generate an answer. Please try again or ask a librarian.';
 
         return NextResponse.json({
           ok: true,
           kind: items.length ? 'recommendations' : 'chat',
-          reply: aiResult.reply,
+          reply,
           recommendations: items,
           youtubeSuggestions: youtube,
           interests: aiResult.searchTerms,
-          summary: aiResult.reply,
+          summary: reply,
           followUpQuestion: aiResult.followUpQuestion,
         });
       }
@@ -272,10 +296,15 @@ export async function POST(request: Request) {
       case 'find_books':
       case 'both': {
         if (!aiResult.searchTerms.length) {
+          // Try to derive a personalized opener; fall back to a static prompt
+          const presetKind = detectPresetIntent(message);
+          const clarifyReply = presetKind
+            ? buildPersonalizedSuggestion(userContext, presetKind).reply
+            : 'Could you tell me more about what topics or subjects you are interested in?';
           return NextResponse.json({
             ok: true,
             kind: 'clarify',
-            reply: aiResult.reply || 'Could you tell me more about what topics or subjects you are interested in?',
+            reply: clarifyReply,
             recommendations: [],
             interests: [],
             summary: null,
@@ -298,9 +327,23 @@ export async function POST(request: Request) {
           });
         }
 
-        const introReply = aiResult.intent === 'both' && aiResult.reply
-          ? aiResult.reply
-          : `Here are some books on ${aiResult.searchTerms.slice(0, 3).join(', ')} from our catalog.`;
+        // For 'both', produce a streaming prose intro; for 'find_books', use a simple opener.
+        let introReply: string;
+        if (aiResult.intent === 'both') {
+          introReply = await collectAnswer({
+            message,
+            intent: aiResult.intent,
+            faqSection: aiResult.faqSection ?? null,
+            bookTitles: items.slice(0, 5).map((i) => i.title),
+            userContext,
+          });
+          if (!introReply) introReply = `Here are some books on ${aiResult.searchTerms.slice(0, 3).join(', ')} from our catalog.`;
+        } else {
+          const presetKind = detectPresetIntent(message);
+          introReply = presetKind
+            ? buildPersonalizedSuggestion(userContext, presetKind).reply
+            : `Here are some books on ${aiResult.searchTerms.slice(0, 3).join(', ')} from our catalog.`;
+        }
 
         return NextResponse.json({
           ok: true,

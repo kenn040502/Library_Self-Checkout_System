@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireStaff } from '@/auth';
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
+import { callDeepSeekJson } from '@/app/lib/ai/deepseek';
 
 type BookCategory = 'Computer Science' | 'Business' | 'Art & Design' | 'Engineering';
 const VALID_CATEGORIES: BookCategory[] = ['Computer Science', 'Business', 'Art & Design', 'Engineering'];
@@ -11,19 +12,6 @@ type MinimalBook = {
   author: string | null;
   classification: string | null;
   tags: string[];
-};
-
-const getGeminiEnv = () => {
-  const rawBase =
-    process.env.GEMINI_API_BASE_URL?.trim() ||
-    'https://generativelanguage.googleapis.com';
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
-  const needsBeta = model.startsWith('gemini-2');
-  const apiVersion = needsBeta ? 'v1beta' : 'v1';
-  const baseRoot = rawBase.replace(/\/?(v1|v1beta)\/?$/i, '');
-  const baseUrl = `${baseRoot.replace(/\/+$/, '')}/${apiVersion}`;
-  return { baseUrl, apiKey, model };
 };
 
 const buildPrompt = (books: MinimalBook[]): string => {
@@ -69,46 +57,15 @@ const inferFallback = (book: MinimalBook): BookCategory => {
   return 'Computer Science';
 };
 
-async function callGemini(books: MinimalBook[]): Promise<Record<string, BookCategory>> {
-  const { baseUrl, apiKey, model } = getGeminiEnv();
-  if (!apiKey) throw new Error('GEMINI_API_KEY missing');
+async function callDeepSeek(books: MinimalBook[]): Promise<Record<string, BookCategory>> {
+  const systemPrompt = 'You are a librarian assistant. Respond only with valid JSON as instructed.';
 
-  const url = `${baseUrl}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const body = {
-    contents: [{ role: 'user', parts: [{ text: buildPrompt(books) }] }],
-    generationConfig: { temperature: 0.1 },
-  };
+  const res = await callDeepSeekJson(systemPrompt, buildPrompt(books), { temperature: 0.1, maxTokens: 512 });
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  if (!res.ok) throw new Error(`DeepSeek request failed: ${res.kind}`);
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Gemini ${res.status}: ${errText}`);
-  }
-
-  const data = await res.json() as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-
-  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-  if (!text.trim()) throw new Error('Gemini returned empty response');
-
-  // Strip markdown code fences if present
-  const stripped = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-
-  let parsed: Record<string, string> | null = null;
-  try {
-    parsed = JSON.parse(stripped);
-  } catch {
-    const match = stripped.match(/\{[\s\S]*\}/);
-    if (match) parsed = JSON.parse(match[0]);
-  }
-
-  if (!parsed) throw new Error('Gemini returned non-JSON');
+  const parsed = res.data as Record<string, string> | null;
+  if (!parsed || typeof parsed !== 'object') throw new Error('DeepSeek returned non-object JSON');
 
   const result: Record<string, BookCategory> = {};
   for (const [key, val] of Object.entries(parsed)) {
@@ -161,17 +118,17 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < books.length; i += chunkSize) {
       const slice = books.slice(i, i + chunkSize);
 
-      let geminiResult: Record<string, BookCategory> = {};
+      let llmResult: Record<string, BookCategory> = {};
       try {
-        geminiResult = await callGemini(slice);
+        llmResult = await callDeepSeek(slice);
       } catch (err) {
-        console.warn('[auto-category] Gemini failed, using heuristic fallback', err);
+        console.warn('[auto-category] DeepSeek failed, using heuristic fallback', err);
       }
 
       await Promise.all(
         slice.map(async (book, idx) => {
           const key = `b${idx}`;
-          const category = geminiResult[key] ?? inferFallback(book);
+          const category = llmResult[key] ?? inferFallback(book);
 
           const { error: updateError } = await supabase
             .from('Books')

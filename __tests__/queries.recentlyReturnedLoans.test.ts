@@ -33,7 +33,7 @@ test('fetchRecentlyReturnedLoans filters by user, non-null returned_at, and with
   expect(mockNot).toHaveBeenCalledWith('returned_at', 'is', null);
   expect(mockEqAfterNot).toHaveBeenCalledWith('user_id', 'user-uuid');
   expect(mockGte).toHaveBeenCalled();
-  const [col, value] = mockGte.mock.calls[0];
+  const [col, value] = (mockGte.mock.calls as unknown as [string, string][])[0];
   expect(col).toBe('returned_at');
   expect(typeof value).toBe('string');
   expect(value).toMatch(/^\d{4}-\d{2}-\d{2}T/);

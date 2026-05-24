@@ -16,6 +16,13 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  // Ignore nested git-worktree checkouts — they have their own __tests__ dirs
+  // that fail with stale module-resolution errors unrelated to this project.
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/.worktrees/',
+    '<rootDir>/.claude/worktrees/',
+  ],
 }
  
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
