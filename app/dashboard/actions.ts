@@ -701,8 +701,14 @@ export async function checkinBookAction(
       ? 'processing'
       : severity ?? 'available';
 
+  const session = await auth();
+  const sessionUser = session?.user as { id?: string; role?: string } | null;
+  const handlerId = sessionUser?.id ?? null;
+  const handlerRole = (sessionUser?.role ?? 'user').toString().trim().toLowerCase();
+  const isPrivilegedHandler =
+    handlerRole === 'admin' || handlerRole === 'staff' || handlerRole === 'librarian';
+
   const supabase = getSupabaseServerClient();
-  const handlerId = await getCurrentUserId();
   const now = new Date();
   const nowIso = now.toISOString();
 
@@ -795,6 +801,14 @@ export async function checkinBookAction(
 
   if (!loan) {
     return failure('No active loan matched the provided reference.');
+  }
+
+  if (!handlerId) {
+    return failure('You must be signed in to return a book.');
+  }
+
+  if (!isPrivilegedHandler) {
+    return failure('Returns must be processed by library staff at the service desk.');
   }
 
   // ---------- Supabase updates ----------

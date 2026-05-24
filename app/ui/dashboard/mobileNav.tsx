@@ -23,8 +23,7 @@ import {
   ChevronRightIcon,
   XMarkIcon,
   SparklesIcon,
-  ChatBubbleLeftRightIcon,
-  AcademicCapIcon,
+
   QuestionMarkCircleIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
@@ -78,11 +77,9 @@ type MoreItem = {
 // Tier 2 — surfaced via the More sheet (admin) or the hamburger drawer.
 const MORE_BY_ROLE: Record<DashboardRole, MoreItem[]> = {
   user: [
-    { label: 'Recommendations', href: '/dashboard/recommendations', icon: SparklesIcon },
-    { label: 'Chat Assistant', href: '/dashboard/chat', icon: ChatBubbleLeftRightIcon },
-    { label: 'Learning hub', href: '/dashboard/learning', icon: AcademicCapIcon },
+    { label: 'Reading Assistant', href: '/dashboard/reading-assistant', icon: SparklesIcon },
     { label: 'Return Books', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
-    { label: 'Help Centre', href: '/dashboard/faq', icon: QuestionMarkCircleIcon },
+    { label: 'Help Center', href: '/dashboard/faq', icon: QuestionMarkCircleIcon },
     { label: 'Profile', href: '/dashboard/profile', icon: UserCircleIcon },
   ],
   staff: [

@@ -17,6 +17,21 @@
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
 }
 
+/* Solid surface cards (no glass/blur). Use when overlays must be fully opaque. */
+.surface-card-solid {
+  background-color: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 8px 26px rgba(17, 17, 17, 0.12);
+}
+
+.dark .dark\:surface-card-solid {
+  background-color: #1e1e1e;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+}
+
 /* Hide native number-input spinners across browsers */
 input[type='number'] {
   -moz-appearance: textfield;
