@@ -4,9 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { getDashboardSession } from '@/app/lib/auth/session';
 import { fetchHoldsForStaff, updateHoldStatus } from '@/app/lib/supabase/queries';
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
-import { createUserNotification } from '@/app/lib/supabase/notifications';
+import { createUserNotification, createNotification } from '@/app/lib/supabase/notifications';
 import AdminShell from '@/app/ui/dashboard/adminShell';
 import HoldsManagementView from '@/app/ui/dashboard/staff/holdsManagementView';
+import StaffCancelHoldButton from '@/app/ui/dashboard/staff/staffCancelHoldButton';
 
 // ---------- server actions ----------
 
@@ -80,12 +81,67 @@ async function cancelHold(formData: FormData) {
   const holdId = formData.get('holdId') as string | null;
   if (!holdId) return;
 
+  // Look up patron + book + (separately) the staff member doing the cancel so
+  // both the patron-targeted notification and the staff/admin broadcast can
+  // name everyone involved.
+  const supabase = getSupabaseServerClient();
+  const { data: holdBefore } = await supabase
+    .from('Holds')
+    .select(
+      'patron_id, status, book:Books(title), patron:Users!Holds_patron_id_fkey(display_name, email)',
+    )
+    .eq('id', holdId)
+    .maybeSingle<{
+      patron_id: string | null;
+      status: string | null;
+      book: { title: string | null } | null;
+      patron: { display_name: string | null; email: string | null } | null;
+    }>();
+
+  const { user: actor } = await getDashboardSession();
+  const actorName =
+    actor?.name ?? actor?.username ?? actor?.email ?? 'Library staff';
+
   await updateHoldStatus(holdId, {
     status: 'canceled',
     ready_at: null,
     expires_at: null,
     fulfilled_by_copy_id: null,
   });
+
+  // Only notify if the hold was actually cancellable (queued/ready) and we
+  // know which patron it belonged to.
+  if (
+    holdBefore?.patron_id &&
+    (holdBefore.status === 'queued' || holdBefore.status === 'ready')
+  ) {
+    const bookTitle = holdBefore.book?.title ?? 'your reserved book';
+    const patronName =
+      holdBefore.patron?.display_name ?? holdBefore.patron?.email ?? 'A patron';
+
+    // Patron-targeted notice
+    await createUserNotification(
+      holdBefore.patron_id,
+      'hold_cancelled',
+      'Reservation cancelled by staff',
+      `Your hold on "${bookTitle}" has been cancelled by library staff. Please place a new hold if you still wish to borrow it.`,
+      { holdId, bookTitle, cancelledBy: 'staff' },
+    );
+
+    // Staff/admin broadcast — names both the actor and the patron
+    await createNotification(
+      'hold_cancelled',
+      'Reservation cancelled by staff',
+      `${actorName} cancelled ${patronName}'s hold on "${bookTitle}".`,
+      {
+        holdId,
+        bookTitle,
+        patronName,
+        actorName,
+        cancelledBy: 'staff',
+      },
+    );
+  }
 
   revalidatePath('/dashboard/book/holds');
 }
@@ -210,15 +266,14 @@ export default async function HoldsManagementPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end">
-                            <form action={cancelHold}>
-                              <input type="hidden" name="holdId" value={hold.id} />
-                              <button
-                                type="submit"
-                                className="rounded-btn border border-primary/30 bg-primary/5 px-3 py-1.5 font-sans text-button text-primary transition hover:bg-primary/10 dark:border-dark-primary/30 dark:bg-dark-primary/10 dark:text-dark-primary dark:hover:bg-dark-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
-                              >
-                                Cancel hold
-                              </button>
-                            </form>
+                            <StaffCancelHoldButton
+                              holdId={hold.id}
+                              bookTitle={hold.book_title ?? 'this book'}
+                              patronName={hold.patron_name ?? undefined}
+                              cancelAction={cancelHold}
+                              variant="warning"
+                              label="Cancel hold"
+                            />
                           </div>
                         </td>
                       </tr>

@@ -200,3 +200,67 @@ export async function updateBookAction(input: UpdateBookInput): Promise<UpdateBo
 
   return { ok: true, bookId: input.id };
 }
+
+export type DeleteBookResult = { ok: true } | { ok: false; message: string };
+
+export async function deleteBookAction(bookId: string): Promise<DeleteBookResult> {
+  const { user } = await getDashboardSession();
+  if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+    return { ok: false, message: 'Not allowed.' };
+  }
+
+  if (!bookId) return { ok: false, message: 'Book id is required.' };
+
+  const supabase = getSupabaseServerClient();
+
+  // Block deletion if any copy is currently checked out — a clean rule that
+  // protects loan history integrity. Staff must wait for returns first.
+  const { data: activeLoans, error: loanError } = await supabase
+    .from('Loans')
+    .select('id, copy:Copies!inner(book_id)')
+    .is('returned_at', null)
+    .eq('copy.book_id', bookId)
+    .limit(1);
+
+  if (loanError) {
+    console.error('[deleteBookAction] active-loan check failed', loanError);
+    return { ok: false, message: 'Could not verify loan status. Please try again.' };
+  }
+  if (activeLoans && activeLoans.length > 0) {
+    return {
+      ok: false,
+      message: 'This book has copies on loan. Wait for returns before deleting.',
+    };
+  }
+
+  // Cancel any outstanding holds so we don't leave orphan reservation rows.
+  const { error: holdError } = await supabase
+    .from('Holds')
+    .update({ status: 'canceled' })
+    .eq('book_id', bookId)
+    .in('status', ['queued', 'ready']);
+  if (holdError) {
+    console.error('[deleteBookAction] hold cleanup failed', holdError);
+    return { ok: false, message: holdError.message ?? 'Could not cancel holds.' };
+  }
+
+  // Remove copies first (FK from Loans → Copies → Books).
+  const { error: copyError } = await supabase.from('Copies').delete().eq('book_id', bookId);
+  if (copyError) {
+    console.error('[deleteBookAction] copy delete failed', copyError);
+    return { ok: false, message: copyError.message ?? 'Could not delete copies.' };
+  }
+
+  // Remove tag links so the FK constraint on BookTagsLinks doesn't block us.
+  await supabase.from('BookTagsLinks').delete().eq('book_id', bookId);
+
+  const { error: bookError } = await supabase.from('Books').delete().eq('id', bookId);
+  if (bookError) {
+    console.error('[deleteBookAction] book delete failed', bookError);
+    return { ok: false, message: bookError.message ?? 'Could not delete book.' };
+  }
+
+  revalidatePath('/dashboard/book/items');
+  revalidatePath('/dashboard/book/list');
+  return { ok: true };
+}

@@ -14,17 +14,15 @@ import {
   UserCircleIcon,
   BookmarkIcon,
   ArrowPathIcon,
-  MagnifyingGlassIcon,
   UserGroupIcon,
   ExclamationTriangleIcon,
-  EllipsisHorizontalIcon,
   ClockIcon,
-  Cog6ToothIcon,
   ChevronRightIcon,
   XMarkIcon,
   SparklesIcon,
-
-  QuestionMarkCircleIcon,
+  AcademicCapIcon,
+  PlusIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import MobileMenu from '@/app/ui/dashboard/mobileMenu';
@@ -41,30 +39,34 @@ type BottomNavItem = {
   isMoreToggle?: boolean;
 };
 
-// Tier 1 — daily nav. Student & staff have a primary FAB centre slot for their
-// main action (Borrow). Admin uses five flat tabs ending with "More" — admin
-// rarely scans, and Tier 2 admin tools live behind that sheet.
+// Bottom nav uses the same FAB-centre pattern for all three roles so the
+// layout is consistent. Labels and icons match the desktop sidebar.
+//   Slot 1: Dashboard
+//   Slot 2: Return Books
+//   Slot 3: Borrow Books (centre FAB — primary action)
+//   Slot 4: My Books (user) / Holds (staff & admin)
+//   Slot 5: Notifications
 const BOTTOM_NAV_BY_ROLE: Record<DashboardRole, BottomNavItem[]> = {
   user: [
-    { key: 'home', label: 'Home', href: '/dashboard', icon: HomeIcon },
-    { key: 'browse', label: 'Browse', href: '/dashboard/book/items', icon: MagnifyingGlassIcon },
-    { key: 'borrow', label: 'Borrow', href: '/dashboard/book/checkout', icon: QrCodeIcon, isCenter: true },
-    { key: 'books', label: 'My Books', href: '/dashboard/my-books', icon: BookOpenIcon },
+    { key: 'home', label: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { key: 'return', label: 'Return Books', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
+    { key: 'borrow', label: 'Borrow Books', href: '/dashboard/book/checkout', icon: QrCodeIcon, isCenter: true },
+    { key: 'books', label: 'My Books', href: '/dashboard/my-books', icon: BookmarkIcon },
     { key: 'alerts', label: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
   ],
   staff: [
-    { key: 'desk', label: 'Desk', href: '/dashboard', icon: HomeIcon },
-    { key: 'return', label: 'Return', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
-    { key: 'borrow', label: 'Borrow', href: '/dashboard/book/checkout', icon: QrCodeIcon, isCenter: true },
+    { key: 'home', label: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { key: 'return', label: 'Return Books', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
+    { key: 'borrow', label: 'Borrow Books', href: '/dashboard/book/checkout', icon: QrCodeIcon, isCenter: true },
     { key: 'holds', label: 'Holds', href: '/dashboard/book/holds', icon: BookmarkIcon },
     { key: 'alerts', label: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
   ],
   admin: [
-    { key: 'overview', label: 'Overview', href: '/dashboard/admin', icon: HomeIcon },
-    { key: 'catalogue', label: 'Catalogue', href: '/dashboard/book/items', icon: BookOpenIcon },
-    { key: 'users', label: 'Users', href: '/dashboard/admin/users', icon: UserGroupIcon },
-    { key: 'damage', label: 'Damage', href: '/dashboard/staff/damage-reports', icon: ExclamationTriangleIcon },
-    { key: 'more', label: 'More', href: '#more', icon: EllipsisHorizontalIcon, isMoreToggle: true },
+    { key: 'home', label: 'Dashboard', href: '/dashboard/admin', icon: HomeIcon },
+    { key: 'return', label: 'Return Books', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
+    { key: 'borrow', label: 'Borrow Books', href: '/dashboard/book/checkout', icon: QrCodeIcon, isCenter: true },
+    { key: 'holds', label: 'Holds', href: '/dashboard/book/holds', icon: BookmarkIcon },
+    { key: 'alerts', label: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
   ],
 };
 
@@ -74,28 +76,34 @@ type MoreItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 
-// Tier 2 — surfaced via the More sheet (admin) or the hamburger drawer.
+// Tier 2 — items not in the bottom 5. Currently unused at runtime (no role
+// flags an item with `isMoreToggle: true` anymore — all overflow lives in the
+// hamburger drawer instead). Kept defined so future "More" sheets can opt in
+// without rebuilding the data.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MORE_BY_ROLE: Record<DashboardRole, MoreItem[]> = {
   user: [
+    { label: 'Catalogue', href: '/dashboard/book/items', icon: BookOpenIcon },
+    { label: 'Learning Hub', href: '/dashboard/learning', icon: AcademicCapIcon },
     { label: 'Reading Assistant', href: '/dashboard/reading-assistant', icon: SparklesIcon },
-    { label: 'Return Books', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
-    { label: 'Help Center', href: '/dashboard/faq', icon: QuestionMarkCircleIcon },
     { label: 'Profile', href: '/dashboard/profile', icon: UserCircleIcon },
   ],
   staff: [
-    { label: 'Damage Reports', href: '/dashboard/staff/damage-reports', icon: ExclamationTriangleIcon },
-    { label: 'Borrow History', href: '/dashboard/book/history', icon: ClockIcon },
     { label: 'Catalogue', href: '/dashboard/book/items', icon: BookOpenIcon },
-    { label: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
+    { label: 'Add Book', href: '/dashboard/admin/books/new', icon: PlusIcon },
+    { label: 'Damage Reports', href: '/dashboard/staff/damage-reports', icon: ExclamationTriangleIcon },
+    { label: 'Loan History', href: '/dashboard/staff/history', icon: ClockIcon },
+    { label: 'Overdue', href: '/dashboard/admin/overdue', icon: EnvelopeIcon },
     { label: 'Profile', href: '/dashboard/profile', icon: UserCircleIcon },
   ],
   admin: [
-    { label: 'Borrow Books', href: '/dashboard/book/checkout', icon: QrCodeIcon },
-    { label: 'Return Books', href: '/dashboard/book/checkin', icon: ArrowPathIcon },
-    { label: 'Holds', href: '/dashboard/book/holds', icon: BookmarkIcon },
-    { label: 'Borrow History', href: '/dashboard/book/history', icon: ClockIcon },
-    { label: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
-    { label: 'Settings', href: '/dashboard/profile', icon: Cog6ToothIcon },
+    { label: 'Catalogue', href: '/dashboard/book/items', icon: BookOpenIcon },
+    { label: 'Add Book', href: '/dashboard/admin/books/new', icon: PlusIcon },
+    { label: 'Users', href: '/dashboard/admin/users', icon: UserGroupIcon },
+    { label: 'Damage Reports', href: '/dashboard/staff/damage-reports', icon: ExclamationTriangleIcon },
+    { label: 'Loan History', href: '/dashboard/staff/history', icon: ClockIcon },
+    { label: 'Overdue', href: '/dashboard/admin/overdue', icon: EnvelopeIcon },
+    { label: 'Profile', href: '/dashboard/profile', icon: UserCircleIcon },
   ],
 };
 

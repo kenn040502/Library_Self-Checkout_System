@@ -6,7 +6,7 @@ import IsbnLookupBox from '@/app/ui/dashboard/primitives/IsbnLookupBox';
 import BarcodePreview from '@/app/ui/dashboard/primitives/BarcodePreview';
 import ConfirmModal from '@/app/ui/dashboard/confirmModal';
 import CameraScanModal from '@/app/ui/dashboard/admin/cameraScanModal';
-import { lookupIsbnInDb, createBookWithCopies, updateBookAction } from '@/app/dashboard/bookActions';
+import { lookupIsbnInDb, createBookWithCopies, updateBookAction, deleteBookAction } from '@/app/dashboard/bookActions';
 import { supabaseBrowserClient } from '@/app/lib/supabase/client';
 import { validateImageUrl } from '@/app/lib/validators/imageUrl';
 
@@ -57,7 +57,9 @@ export default function AddBookForm({
   const [previewBarcodes, setPreviewBarcodes] = useState<string[] | null>(null);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [submitting, startTransition] = useTransition();
+  const [deleting, startDeleteTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
 
@@ -380,12 +382,12 @@ export default function AddBookForm({
         </section>
       )}
 
-      <div className="flex justify-center">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           type="button"
           onClick={submit}
-          disabled={submitting}
-          aria-disabled={submitting}
+          disabled={submitting || deleting}
+          aria-disabled={submitting || deleting}
           className="rounded-btn bg-primary hover:bg-primary-active px-8 py-3 font-sans text-button text-on-primary transition disabled:bg-primary-disabled disabled:text-muted disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
         >
           {isEdit
@@ -396,6 +398,18 @@ export default function AddBookForm({
               ? 'Creating…'
               : `Create book + ${copies} cop${copies === 1 ? 'y' : 'ies'}`}
         </button>
+
+        {isEdit && bookId && (
+          <button
+            type="button"
+            onClick={() => setConfirmDeleteOpen(true)}
+            disabled={submitting || deleting}
+            aria-disabled={submitting || deleting}
+            className="inline-flex items-center gap-1.5 rounded-btn border border-primary/40 bg-canvas px-6 py-3 font-sans text-button text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-primary/40 dark:bg-dark-surface-soft dark:text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+          >
+            {deleting ? 'Deleting…' : 'Delete book'}
+          </button>
+        )}
       </div>
 
       {!isEdit && (
@@ -414,6 +428,31 @@ export default function AddBookForm({
           cancelText="Go back"
           onConfirm={confirmSubmit}
           onCancel={() => setConfirmOpen(false)}
+        />
+      )}
+
+      {isEdit && bookId && (
+        <ConfirmModal
+          isOpen={confirmDeleteOpen}
+          type="danger"
+          title="Delete this book?"
+          message={`This will permanently delete "${title || 'this book'}" and all of its copies from the catalogue. Loan history will be preserved. This cannot be undone.`}
+          confirmText={deleting ? 'Deleting…' : 'Yes, delete'}
+          cancelText="Cancel"
+          onCancel={() => setConfirmDeleteOpen(false)}
+          onConfirm={() => {
+            setConfirmDeleteOpen(false);
+            setError(null);
+            startDeleteTransition(async () => {
+              const result = await deleteBookAction(bookId);
+              if (!result.ok) {
+                setError(result.message);
+                return;
+              }
+              router.push('/dashboard/book/items');
+              router.refresh();
+            });
+          }}
         />
       )}
 

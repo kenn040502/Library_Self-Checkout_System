@@ -6,6 +6,7 @@ import KpiCard from '@/app/ui/dashboard/primitives/KpiCard';
 import FilterPills from '@/app/ui/dashboard/primitives/FilterPills';
 import StatusBadge from '@/app/ui/dashboard/primitives/StatusBadge';
 import MarkReadyButton from '@/app/ui/dashboard/markReadyButton';
+import StaffCancelHoldButton from '@/app/ui/dashboard/staff/staffCancelHoldButton';
 
 type StaffHoldRow = {
   id: string;
@@ -175,15 +176,12 @@ export default function HoldsManagementView({
                           />
                         )}
                         {(h.status === 'queued' || h.status === 'ready') && (
-                          <form action={cancelHoldAction}>
-                            <input type="hidden" name="holdId" value={h.id} />
-                            <button
-                              type="submit"
-                              className="inline-flex h-9 items-center rounded-btn border border-hairline bg-surface-card px-3 font-sans text-caption-uppercase text-ink transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong dark:focus-visible:ring-offset-dark-canvas"
-                            >
-                              Cancel
-                            </button>
-                          </form>
+                          <StaffCancelHoldButton
+                            holdId={h.id}
+                            bookTitle={h.book_title ?? 'this book'}
+                            patronName={h.patron_name ?? undefined}
+                            cancelAction={cancelHoldAction}
+                          />
                         )}
                       </div>
                     </td>

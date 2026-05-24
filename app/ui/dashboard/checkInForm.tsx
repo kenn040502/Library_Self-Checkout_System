@@ -64,11 +64,18 @@ export default function CheckInForm({
     if (!allowPatronLookup && mode !== 'scan') setMode('scan');
   }, [allowPatronLookup, mode]);
 
-  // On success: optionally preserve scan input refocus for bulk, or show receipt
+  // Snapshot of `damage` for the success effect to read — using a ref keeps
+  // it out of the effect's dep array so calling `setDamage(null)` inside the
+  // effect doesn't re-trigger it and push a duplicate (green) receipt entry
+  // on top of the original (yellow) damaged entry.
+  const damageRef = useRef(damage);
+  damageRef.current = damage;
+
+  // On success: push exactly one receipt entry, reset the form, refocus for bulk.
   useEffect(() => {
     if (state.status === 'success') {
       const label = state.message ?? 'Return processed';
-      const tone: BulkEntry['tone'] = damage ? 'damaged' : 'success';
+      const tone: BulkEntry['tone'] = damageRef.current ? 'damaged' : 'success';
       setBulkFeed((prev) => [{ when: Date.now(), label, tone }, ...prev].slice(0, 3));
       formRef.current?.reset();
       setIdentifier('');
@@ -80,7 +87,7 @@ export default function CheckInForm({
         setTimeout(() => identifierRef.current?.focus(), 50);
       }
     }
-  }, [state.status, state.message, damage, bulkMode]);
+  }, [state.status, state.message, bulkMode]);
 
   // If parent passes a pre-filled identifier (e.g. from staff dashboard scan), use it
   useEffect(() => {
@@ -167,20 +174,6 @@ export default function CheckInForm({
               {activeLoanCount} book{activeLoanCount === 1 ? '' : 's'} currently on loan.
             </p>
           </div>
-          {allowBulkMode ? (
-            <label className="flex items-center gap-2 font-sans text-body-sm font-medium text-muted dark:text-on-dark-soft">
-              <input
-                type="checkbox"
-                checked={bulkMode}
-                suppressHydrationWarning
-                onChange={(e) => {
-                  setBulkMode(e.target.checked);
-                  if (!e.target.checked) setBulkFeed([]);
-                }}
-              />
-              Continue scanning (bulk mode)
-            </label>
-          ) : null}
         </div>
 
         {/* Mode tabs */}

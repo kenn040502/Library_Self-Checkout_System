@@ -33,28 +33,34 @@ import { useEffect, useState } from 'react';
 
 type NavItem = { icon: React.ElementType; label: string; href: string; badge?: number };
 
+// Shared order across all three roles so the sidebar layout stays consistent
+// when switching roles. Common items (Dashboard, Borrow Books, Return Books,
+// Catalogue, Notifications, Profile) sit in the same vertical slots. Role-
+// specific items (Users, Damage Reports, My Books, etc.) are inserted between
+// without pushing the shared items around.
 const ADMIN_NAV: NavItem[] = [
-  { icon: HomeIcon,                  label: 'Overview',        href: '/dashboard/admin' },
+  { icon: HomeIcon,                  label: 'Dashboard',       href: '/dashboard/admin' },
+  { icon: QrCodeIcon,                label: 'Borrow Books',    href: '/dashboard/book/checkout' },
+  { icon: ArrowPathIcon,             label: 'Return Books',    href: '/dashboard/book/checkin' },
+  { icon: BookmarkIcon,              label: 'Holds',           href: '/dashboard/book/holds' },
   { icon: BookOpenIcon,              label: 'Catalogue',       href: '/dashboard/book/items' },
   { icon: PlusIcon,                  label: 'Add Book',        href: '/dashboard/admin/books/new' },
   { icon: UserGroupIcon,             label: 'Users',           href: '/dashboard/admin/users' },
-  { icon: BookmarkIcon,              label: 'Holds',           href: '/dashboard/book/holds' },
-  { icon: QrCodeIcon,                label: 'Borrow Books',    href: '/dashboard/book/checkout' },
-  { icon: ArrowPathIcon,             label: 'Return Books',    href: '/dashboard/book/checkin' },
   { icon: ExclamationTriangleIcon,   label: 'Damage Reports',  href: '/dashboard/staff/damage-reports' },
   { icon: ClockIcon,                 label: 'Loan History',    href: '/dashboard/staff/history' },
   { icon: EnvelopeIcon,              label: 'Overdue',         href: '/dashboard/admin/overdue' },
   { icon: BellIcon,                  label: 'Notifications',   href: '/dashboard/notifications' },
-  { icon: Cog6ToothIcon,             label: 'Settings',        href: '/dashboard/profile' },
+  { icon: UserCircleIcon,            label: 'Profile',         href: '/dashboard/profile' },
 ];
 
 const STAFF_NAV: NavItem[] = [
-  { icon: HomeIcon,                  label: 'Desk',            href: '/dashboard' },
+  { icon: HomeIcon,                  label: 'Dashboard',       href: '/dashboard' },
   { icon: QrCodeIcon,                label: 'Borrow Books',    href: '/dashboard/book/checkout' },
   { icon: ArrowPathIcon,             label: 'Return Books',    href: '/dashboard/book/checkin' },
   { icon: BookmarkIcon,              label: 'Holds',           href: '/dashboard/book/holds' },
   { icon: BookOpenIcon,              label: 'Catalogue',       href: '/dashboard/book/items' },
   { icon: PlusIcon,                  label: 'Add Book',        href: '/dashboard/admin/books/new' },
+  // (Users slot — admin only)
   { icon: ExclamationTriangleIcon,   label: 'Damage Reports',  href: '/dashboard/staff/damage-reports' },
   { icon: ClockIcon,                 label: 'Loan History',    href: '/dashboard/staff/history' },
   { icon: EnvelopeIcon,              label: 'Overdue',         href: '/dashboard/admin/overdue' },
@@ -63,15 +69,15 @@ const STAFF_NAV: NavItem[] = [
 ];
 
 const USER_NAV: NavItem[] = [
-  { icon: HomeIcon,                  label: 'Dashboard',       href: '/dashboard' },
-  { icon: MagnifyingGlassIcon,       label: 'Catalogue',       href: '/dashboard/book/items' },
-  { icon: QrCodeIcon,                label: 'Borrow',          href: '/dashboard/book/checkout' },
-  { icon: ArrowPathIcon,             label: 'Return',          href: '/dashboard/book/checkin' },
-  { icon: BookOpenIcon,              label: 'My Books',        href: '/dashboard/my-books' },
-  { icon: AcademicCapIcon,           label: 'Learning hub',    href: '/dashboard/learning' },
+  { icon: HomeIcon,                  label: 'Dashboard',         href: '/dashboard' },
+  { icon: QrCodeIcon,                label: 'Borrow Books',      href: '/dashboard/book/checkout' },
+  { icon: ArrowPathIcon,             label: 'Return Books',      href: '/dashboard/book/checkin' },
+  { icon: BookmarkIcon,              label: 'My Books',          href: '/dashboard/my-books' },
+  { icon: BookOpenIcon,              label: 'Catalogue',         href: '/dashboard/book/items' },
+  { icon: AcademicCapIcon,           label: 'Learning Hub',      href: '/dashboard/learning' },
   { icon: SparklesIcon,              label: 'Reading Assistant', href: '/dashboard/reading-assistant' },
-  { icon: BellIcon,                  label: 'Notifications',   href: '/dashboard/notifications' },
-  { icon: UserCircleIcon,            label: 'Profile',         href: '/dashboard/profile' },
+  { icon: BellIcon,                  label: 'Notifications',     href: '/dashboard/notifications' },
+  { icon: UserCircleIcon,            label: 'Profile',           href: '/dashboard/profile' },
 ];
 
 function getNav(role: DashboardRole): NavItem[] {

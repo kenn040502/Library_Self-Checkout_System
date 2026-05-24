@@ -24,15 +24,10 @@ async function cancelReservation(formData: FormData) {
   if (!user) return { ok: false, error: 'Not signed in.' } as const;
 
   try {
+    // cancelHoldForPatron owns the notification flow: it fires the patron's
+    // own confirmation AND a staff/admin broadcast. Don't re-fire here.
     await cancelHoldForPatron(holdId, user.id);
-
-    const title = 'Reservation cancelled';
-    const safeTitle = typeof bookTitle === 'string' && bookTitle.trim() ? bookTitle.trim() : null;
-    const message = safeTitle
-      ? `You cancelled your reservation for "${safeTitle}".`
-      : 'You cancelled your reservation successfully.';
-
-    await createUserNotification(user.id, 'hold_cancelled', title, message, { holdId });
+    void bookTitle; // bookTitle is no longer used here — left in form data for legacy callers.
   } catch (error) {
     console.error('Failed to cancel hold', error);
     return { ok: false, error: 'Failed to cancel hold.' } as const;

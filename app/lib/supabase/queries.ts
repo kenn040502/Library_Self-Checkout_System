@@ -1116,6 +1116,21 @@ export async function fetchHoldsForBook(bookId: string): Promise<number> {
 export async function cancelHoldForPatron(holdId: string, patronId: string): Promise<boolean> {
   const supabase = getSupabaseServerClient();
 
+  // Look up book title + patron display name BEFORE we cancel so both the
+  // patron-targeted notification and the staff/admin broadcast can name them.
+  const { data: holdBefore } = await supabase
+    .from('Holds')
+    .select('book:Books(title), patron:Users!Holds_patron_id_fkey(display_name, email)')
+    .eq('id', holdId)
+    .eq('patron_id', patronId)
+    .maybeSingle<{
+      book: { title: string | null } | null;
+      patron: { display_name: string | null; email: string | null } | null;
+    }>();
+  const bookTitle = holdBefore?.book?.title ?? 'your reserved book';
+  const patronName =
+    holdBefore?.patron?.display_name ?? holdBefore?.patron?.email ?? 'A patron';
+
   const { data, error } = await supabase
     .from('Holds')
     .update({
@@ -1131,7 +1146,28 @@ export async function cancelHoldForPatron(holdId: string, patronId: string): Pro
 
   if (error) throw error;
 
-  return Array.isArray(data) && data.length > 0;
+  const ok = Array.isArray(data) && data.length > 0;
+  if (ok) {
+    const { createUserNotification, createNotification } = await import(
+      '@/app/lib/supabase/notifications'
+    );
+    // Patron-targeted confirmation
+    await createUserNotification(
+      patronId,
+      'hold_cancelled',
+      'Reservation cancelled',
+      `Your hold on "${bookTitle}" has been cancelled.`,
+      { holdId, bookTitle, cancelledBy: 'patron' },
+    );
+    // Staff/admin broadcast (target_roles defaults to {staff,admin})
+    await createNotification(
+      'hold_cancelled',
+      'Reservation cancelled',
+      `${patronName} cancelled their hold on "${bookTitle}".`,
+      { holdId, bookTitle, patronName, cancelledBy: 'patron' },
+    );
+  }
+  return ok;
 }
 
 /**
