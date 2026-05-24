@@ -9,17 +9,39 @@ type ComposerProps = {
   onChange: (next: string) => void;
   onSubmit: () => void;
   disabled?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  onHistoryUp?: () => void;
+  onHistoryDown?: () => void;
 };
 
 const COUNTER_THRESHOLD = READING_ASSISTANT_MAX_MESSAGE_CHARS - 200;
 
-export default function Composer({ value, onChange, onSubmit, disabled }: ComposerProps) {
+export default function Composer({ value, onChange, onSubmit, disabled, onFocus, onBlur, onHistoryUp, onHistoryDown }: ComposerProps) {
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!disabled && value.trim()) onSubmit();
+      return;
+    }
+    if (e.key === 'ArrowUp' && !e.shiftKey && !e.ctrlKey && !e.metaKey && onHistoryUp) {
+      const ta = e.currentTarget;
+      const beforeCursor = ta.value.slice(0, ta.selectionStart ?? 0);
+      if (!beforeCursor.includes('\n')) {
+        e.preventDefault();
+        onHistoryUp();
+      }
+      return;
+    }
+    if (e.key === 'ArrowDown' && !e.shiftKey && !e.ctrlKey && !e.metaKey && onHistoryDown) {
+      const ta = e.currentTarget;
+      const afterCursor = ta.value.slice(ta.selectionEnd ?? ta.value.length);
+      if (!afterCursor.includes('\n')) {
+        e.preventDefault();
+        onHistoryDown();
+      }
     }
   };
 
@@ -50,6 +72,8 @@ export default function Composer({ value, onChange, onSubmit, disabled }: Compos
           className="min-h-[40px] flex-1 resize-none border-0 bg-transparent px-3 py-2 font-sans text-body-md text-ink placeholder:text-muted-soft focus:outline-none focus:ring-0 dark:text-on-dark dark:placeholder:text-on-dark-soft"
           style={{ maxHeight: '160px' }}
           disabled={disabled}
+          onFocus={onFocus}
+          onBlur={onBlur}
         />
         <button
           type="button"
