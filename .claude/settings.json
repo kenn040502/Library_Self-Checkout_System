@@ -4,7 +4,9 @@
     "allow": [
       "WebSearch",
       "Bash(pnpm tsc *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npx supabase *)",
+      "Bash(node -e ' *)"
     ]
   },
   "enabledPlugins": {

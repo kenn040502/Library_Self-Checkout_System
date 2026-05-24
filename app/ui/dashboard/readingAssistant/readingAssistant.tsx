@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { ArrowsPointingOutIcon, ArrowsPointingInIcon, TrashIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import MessageBubble, { type Role } from '@/app/ui/dashboard/readingAssistant/messageBubble';
 import QuickPrompts from '@/app/ui/dashboard/readingAssistant/quickPrompts';
 import Composer from '@/app/ui/dashboard/readingAssistant/composer';
-import type { ReadingAssistantBook } from '@/app/ui/dashboard/readingAssistant/bookList';
+import BookList, { type ReadingAssistantBook } from '@/app/ui/dashboard/readingAssistant/bookList';
 
 type Turn = {
   id: string;
@@ -28,9 +28,15 @@ function makeId(): string {
 export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState(false); // assistant is replying
+  const [busy, setBusy] = useState(false);
   const [hydrating, setHydrating] = useState(true);
   const feedRef = useRef<HTMLDivElement | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const sentHistoryRef = useRef<string[]>([]);
+  const historyIdxRef = useRef(-1);
+  const savedDraftRef = useRef('');
 
   // Load history on mount.
   useEffect(() => {
@@ -67,6 +73,31 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [turns, busy]);
 
+  // Show scroll-to-bottom button when user scrolls up in fullscreen.
+  useEffect(() => {
+    const el = feedRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowScrollBtn(fullscreen && distanceFromBottom > 80);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [fullscreen]);
+
+  // Hide scroll button when exiting fullscreen.
+  useEffect(() => {
+    if (!fullscreen) setShowScrollBtn(false);
+  }, [fullscreen]);
+
+  // Escape key exits fullscreen.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [fullscreen]);
+
   const handleSend = useCallback(
     async (rawMessage?: string) => {
       const message = (rawMessage ?? draft).trim();
@@ -75,6 +106,9 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
       const userTurn: Turn = { id: makeId(), role: 'user', text: message };
       const assistantId = makeId();
       setTurns((prev) => [...prev, userTurn, { id: assistantId, role: 'assistant', text: '', streaming: true }]);
+      sentHistoryRef.current = [message, ...sentHistoryRef.current];
+      historyIdxRef.current = -1;
+      savedDraftRef.current = '';
       setDraft('');
       setBusy(true);
 
@@ -117,7 +151,7 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
               catch { continue; }
             }
             if (event === 'delta' && typeof data.text === 'string') appendAssistant(data.text);
-            else if (event === 'meta') patchAssistant({ books: data.books, basedOn: data.faqSection ?? null });
+            else if (event === 'meta') patchAssistant({ books: data.books?.length ? data.books : undefined, basedOn: data.faqSection ?? null });
             else if (event === 'error') patchAssistant({ text: data.message ?? 'Something went wrong.', books: data.books ?? [], streaming: false });
             else if (event === 'done') patchAssistant({ streaming: false });
           }
@@ -132,6 +166,29 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
     },
     [draft, busy],
   );
+
+  const handleHistoryUp = useCallback(() => {
+    const history = sentHistoryRef.current;
+    if (history.length === 0) return;
+    const cur = historyIdxRef.current;
+    if (cur === -1) savedDraftRef.current = draft;
+    const next = cur === -1 ? 0 : Math.min(cur + 1, history.length - 1);
+    historyIdxRef.current = next;
+    setDraft(history[next]);
+  }, [draft]);
+
+  const handleHistoryDown = useCallback(() => {
+    const cur = historyIdxRef.current;
+    if (cur === -1) return;
+    if (cur === 0) {
+      historyIdxRef.current = -1;
+      setDraft(savedDraftRef.current);
+      return;
+    }
+    const next = cur - 1;
+    historyIdxRef.current = next;
+    setDraft(sentHistoryRef.current[next]);
+  }, []);
 
   const handleComposerSubmit = useCallback(() => {
     void handleSend();
@@ -158,36 +215,101 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
   const hasTurns = turns.length > 0;
 
   return (
-    <div className="rounded-card border border-hairline bg-surface-card p-6 dark:border-dark-hairline dark:bg-dark-surface-card">
+    <div
+      className={
+        fullscreen
+          ? 'fixed inset-0 z-[70] flex flex-col p-6'
+          : 'rounded-card border border-hairline bg-surface-card p-6 dark:border-dark-hairline dark:bg-dark-surface-card'
+      }
+      style={
+        fullscreen
+          ? {
+              animation: 'zoomIn 0.25s ease-out',
+              backgroundColor: '#ffffff',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none',
+            }
+          : {
+              animation: 'zoomIn 0.35s ease-out',
+              transform: inputFocused ? 'scale(1.013)' : 'scale(1)',
+              transition: 'transform 0.25s ease-out',
+            }
+      }
+    >
+      {/* Header */}
       <div className="mb-3 flex items-center justify-between border-b border-hairline-soft pb-3 dark:border-dark-hairline">
         <p className="font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">
           Conversation
         </p>
-        <button
-          type="button"
-          onClick={handleClearChat}
-          disabled={!hasTurns || busy}
-          aria-label="Clear chat"
-          className="inline-flex items-center gap-1.5 rounded-btn border border-hairline bg-canvas px-3 py-1.5 font-sans text-body-sm text-body transition hover:border-error/40 hover:bg-error/5 hover:text-error disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-hairline disabled:hover:bg-canvas disabled:hover:text-body dark:border-dark-hairline dark:bg-dark-canvas dark:text-on-dark-soft dark:hover:border-error/50 dark:hover:bg-error/10 dark:hover:text-error"
-        >
-          <TrashIcon className="h-4 w-4" aria-hidden="true" />
-          <span>Clear</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFullscreen((f) => !f)}
+            aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-btn border border-hairline bg-canvas text-muted transition hover:bg-surface-cream-strong hover:text-ink dark:border-dark-hairline dark:bg-dark-canvas dark:text-on-dark-soft dark:hover:bg-dark-surface-strong dark:hover:text-on-dark"
+          >
+            {fullscreen
+              ? <ArrowsPointingInIcon className="h-4 w-4" />
+              : <ArrowsPointingOutIcon className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={handleClearChat}
+            disabled={!hasTurns || busy}
+            aria-label="Clear chat"
+            className="inline-flex items-center gap-1.5 rounded-btn border border-hairline bg-canvas px-3 py-1.5 font-sans text-body-sm text-body transition hover:border-error/40 hover:bg-error/5 hover:text-error disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-hairline disabled:hover:bg-canvas disabled:hover:text-body dark:border-dark-hairline dark:bg-dark-canvas dark:text-on-dark-soft dark:hover:border-error/50 dark:hover:bg-error/10 dark:hover:text-error"
+          >
+            <TrashIcon className="h-4 w-4" aria-hidden="true" />
+            <span>Clear</span>
+          </button>
+        </div>
       </div>
 
+      {/* Message feed */}
+      <div className={fullscreen ? 'relative flex-1 overflow-hidden' : 'relative'}>
       <div
         ref={feedRef}
-        className="min-h-[360px] space-y-4 overflow-y-auto pb-2"
-        style={{ maxHeight: 'calc(100vh - 420px)' }}
+        className={fullscreen ? 'h-full overflow-y-auto pb-2' : 'min-h-[360px] overflow-y-auto pb-2'}
+        style={fullscreen ? undefined : { maxHeight: 'calc(100vh - 420px)' }}
       >
         {!hydrating && !hasTurns && (
           <p className="font-sans text-body-md text-muted dark:text-on-dark-soft">
             Ask me anything about the library — loans, holds, recommendations, or specific books. Tap a suggestion below to get started.
           </p>
         )}
-        {turns.map((t) => (
-          <MessageBubble key={t.id} role={t.role} text={t.text} books={t.books} streaming={t.streaming} basedOn={t.basedOn} />
-        ))}
+        <div className="space-y-4">
+          {turns.map((t) => (
+            <div key={t.id} className="flex flex-col gap-2">
+              <MessageBubble
+                role={t.role}
+                text={t.text}
+                streaming={t.streaming}
+                basedOn={t.basedOn}
+                onEdit={t.role === 'user' ? () => { historyIdxRef.current = -1; setDraft(t.text); } : undefined}
+                onResend={t.role === 'user' ? () => { void handleSend(t.text); } : undefined}
+              />
+              {t.books && t.books.length > 0 && !t.streaming && (
+                <div className="max-w-[88%] self-start">
+                  <BookList books={t.books} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      {showScrollBtn && (
+        <button
+          type="button"
+          onClick={() => {
+            const el = feedRef.current;
+            if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+          }}
+          aria-label="Scroll to bottom"
+          className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-white shadow-md transition hover:bg-surface-cream-strong dark:border-dark-hairline dark:bg-dark-canvas dark:hover:bg-dark-surface-strong"
+        >
+          <ArrowDownIcon className="h-4 w-4 text-ink dark:text-on-dark" />
+        </button>
+      )}
       </div>
 
       <div className="mt-4">
@@ -196,9 +318,13 @@ export default function ReadingAssistant({ userId }: ReadingAssistantProps) {
 
       <Composer
         value={draft}
-        onChange={setDraft}
+        onChange={(v) => { historyIdxRef.current = -1; setDraft(v); }}
         onSubmit={handleComposerSubmit}
         disabled={busy}
+        onFocus={() => setInputFocused(true)}
+        onBlur={() => setInputFocused(false)}
+        onHistoryUp={handleHistoryUp}
+        onHistoryDown={handleHistoryDown}
       />
     </div>
   );

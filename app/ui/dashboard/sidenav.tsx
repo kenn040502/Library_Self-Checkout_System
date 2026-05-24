@@ -23,6 +23,7 @@ import {
   ChevronRightIcon,
   PlusIcon,
   EnvelopeIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useTheme } from '@/app/ui/theme/themeProvider';
@@ -67,6 +68,7 @@ const USER_NAV: NavItem[] = [
   { icon: QrCodeIcon,                label: 'Borrow',          href: '/dashboard/book/checkout' },
   { icon: ArrowPathIcon,             label: 'Return',          href: '/dashboard/book/checkin' },
   { icon: BookOpenIcon,              label: 'My Books',        href: '/dashboard/my-books' },
+  { icon: AcademicCapIcon,           label: 'Learning hub',    href: '/dashboard/learning' },
   { icon: SparklesIcon,              label: 'Reading Assistant', href: '/dashboard/reading-assistant' },
   { icon: BellIcon,                  label: 'Notifications',   href: '/dashboard/notifications' },
   { icon: UserCircleIcon,            label: 'Profile',         href: '/dashboard/profile' },

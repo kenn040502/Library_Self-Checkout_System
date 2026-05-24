@@ -17,6 +17,8 @@ import {
   READING_ASSISTANT_MAX_MESSAGE_CHARS,
 } from '@/app/lib/recommendations/policy';
 
+type BookLevel = 'beginner' | 'intermediate' | 'advanced';
+
 type ReadingAssistantBook = {
   id: string;
   title: string;
@@ -24,7 +26,17 @@ type ReadingAssistantBook = {
   coverImageUrl: string | null;
   classification: string | null;
   isbn: string | null;
+  level: BookLevel;
 };
+
+const BEGINNER_RE = /\b(introduction|intro|fundamentals?|basics?|beginner|primer|getting\s+started|essentials?|101|foundation|overview|principles?|guide\s+for\s+beginners?)\b/i;
+const ADVANCED_RE = /\b(advanced|expert|professional|mastering|master|deep\s+dive|internals?|architecture|optimization|enterprise|graduate|in\s+depth|comprehensive)\b/i;
+
+function classifyLevel(title: string): BookLevel {
+  if (BEGINNER_RE.test(title)) return 'beginner';
+  if (ADVANCED_RE.test(title)) return 'advanced';
+  return 'intermediate';
+}
 
 const FALLBACK_OPENER =
   'The reading assistant is busy right now — here are keyword matches from our catalogue. For library help, please ask a librarian or check the help articles.';
@@ -79,13 +91,14 @@ async function persistTurn(
 async function searchBooks(term: string | undefined): Promise<ReadingAssistantBook[]> {
   if (!term) return [];
   const rows = await safe(fetchBooks(term), [], 'fetchBooks');
-  return (rows ?? []).slice(0, 5).map((b) => ({
+  return (rows ?? []).slice(0, 15).map((b) => ({
     id: b.id,
     title: b.title,
     author: b.author ?? null,
     coverImageUrl: b.coverImageUrl ?? null,
     classification: b.classification ?? null,
     isbn: b.isbn ?? null,
+    level: classifyLevel(b.title),
   }));
 }
 
