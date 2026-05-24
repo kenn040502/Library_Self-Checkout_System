@@ -326,12 +326,16 @@ export default function UserDetailForm({ user: initial, recentLoans }: Props) {
           <section className="rounded-card border border-primary/30 bg-primary/5 p-6 dark:border-dark-primary/30 dark:bg-dark-primary/10">
             <h2 className="mb-1 font-display text-display-sm text-primary dark:text-dark-primary">Danger zone</h2>
             <p className="mb-4 font-sans text-body-md text-ink/80 dark:text-on-dark/80">
-              Deleting an account permanently removes the user and disconnects their loan history.
+              {user.role === 'admin'
+                ? 'Admin accounts cannot be deleted directly. Change the role to "user" or "staff" above first, save, then return here to delete. At least one admin must exist at all times.'
+                : 'Deleting an account permanently removes the user and disconnects their loan history.'}
             </p>
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="inline-flex items-center gap-1.5 rounded-btn border border-primary/40 bg-canvas px-3.5 py-2 font-sans text-button text-primary transition hover:bg-primary/10 dark:border-dark-primary/40 dark:bg-dark-surface-soft dark:text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
+              disabled={user.role === 'admin'}
+              title={user.role === 'admin' ? 'Demote this admin first before deleting.' : undefined}
+              className="inline-flex items-center gap-1.5 rounded-btn border border-primary/40 bg-canvas px-3.5 py-2 font-sans text-button text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-canvas dark:border-dark-primary/40 dark:bg-dark-surface-soft dark:text-dark-primary dark:disabled:hover:bg-dark-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:focus-visible:ring-offset-dark-canvas"
             >
               <TrashIcon className="h-4 w-4" />
               Delete account
