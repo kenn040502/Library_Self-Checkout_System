@@ -43,6 +43,7 @@ test('GET returns messages for the session user', async () => {
     sender: 'user',
     text: 'hi',
     timestamp: '2026-05-07T00:00:00Z',
+    books: [],
   });
   expect(fromMock).toHaveBeenCalledWith('GeneralChatHistory');
   expect(eqSelectMock).toHaveBeenCalledWith('user_id', 'user-uuid');
