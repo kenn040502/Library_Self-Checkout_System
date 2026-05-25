@@ -1491,6 +1491,8 @@ export type DamageReportRow = {
   notes: string | null;
   photoPaths: string[];
   createdAt: string;
+  resolvedAt: string | null;
+  resolutionNotes: string | null;
   loan: {
     id: string;
     dueAt: string | null;
@@ -1515,6 +1517,11 @@ export type DamageReportRow = {
     email: string;
     displayName: string | null;
   } | null;
+  resolvedBy: {
+    id: string;
+    email: string;
+    displayName: string | null;
+  } | null;
 };
 
 type RawDamageReportRow = {
@@ -1523,6 +1530,8 @@ type RawDamageReportRow = {
   notes: string | null;
   photo_urls: string[] | null;
   created_at: string;
+  resolved_at: string | null;
+  resolution_notes: string | null;
   loan: {
     id: string;
     due_at: string | null;
@@ -1548,6 +1557,11 @@ type RawDamageReportRow = {
     email: string;
     profile: { display_name: string | null } | null;
   } | null;
+  resolver: {
+    id: string;
+    email: string;
+    profile: { display_name: string | null } | null;
+  } | null;
 };
 
 const normalizeDamageSeverity = (value: unknown): DamageSeverity => {
@@ -1563,6 +1577,8 @@ const mapDamageReportRow = (row: RawDamageReportRow): DamageReportRow => ({
   notes: row.notes,
   photoPaths: Array.isArray(row.photo_urls) ? row.photo_urls : [],
   createdAt: row.created_at,
+  resolvedAt: row.resolved_at ?? null,
+  resolutionNotes: row.resolution_notes ?? null,
   loan: row.loan
     ? {
         id: row.loan.id,
@@ -1593,6 +1609,13 @@ const mapDamageReportRow = (row: RawDamageReportRow): DamageReportRow => ({
         displayName: row.reporter.profile?.display_name ?? null,
       }
     : null,
+  resolvedBy: row.resolver
+    ? {
+        id: row.resolver.id,
+        email: row.resolver.email,
+        displayName: row.resolver.profile?.display_name ?? null,
+      }
+    : null,
 });
 
 export async function fetchDamageReports(opts?: {
@@ -1612,6 +1635,8 @@ export async function fetchDamageReports(opts?: {
         notes,
         photo_urls,
         created_at,
+        resolved_at,
+        resolution_notes,
         loan:Loans(
           id,
           due_at,
@@ -1632,6 +1657,11 @@ export async function fetchDamageReports(opts?: {
           id,
           email,
           profile:UserProfile(display_name)
+        ),
+        resolver:Users!DamageReports_resolved_by_fkey(
+          id,
+          email,
+          profile:UserProfile(display_name)
         )
       `,
     )
@@ -1648,7 +1678,67 @@ export async function fetchDamageReports(opts?: {
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+
+  // If the resolved_* columns or FK don't exist yet (migration not yet run),
+  // fall back to the legacy query without those fields so the page still loads.
+  if (error) {
+    const isSchemaError =
+      typeof (error as { code?: string }).code === 'string' &&
+      ['42703', 'PGRST200', 'PGRST201'].includes((error as { code: string }).code);
+    if (!isSchemaError) throw error;
+
+    console.warn(
+      '[fetchDamageReports] resolved_* columns missing — run migration 20260604_damage_reports_resolution.sql',
+      error.message,
+    );
+
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('DamageReports')
+      .select(
+        `
+          id,
+          severity,
+          notes,
+          photo_urls,
+          created_at,
+          loan:Loans(
+            id,
+            due_at,
+            returned_at,
+            user_id,
+            borrower:Users!Loans_user_id_fkey(
+              id,
+              email,
+              profile:UserProfile(display_name)
+            )
+          ),
+          copy:Copies(
+            id,
+            barcode,
+            book:Books(id, title, author)
+          ),
+          reporter:Users!DamageReports_reported_by_fkey(
+            id,
+            email,
+            profile:UserProfile(display_name)
+          )
+        `,
+      )
+      .order('created_at', { ascending: false })
+      .limit(opts?.limit ?? 100);
+
+    if (fallbackError) throw fallbackError;
+    const fallbackRows = ((fallbackData ?? []) as unknown) as RawDamageReportRow[];
+    return fallbackRows.map((row) => ({
+      ...mapDamageReportRow(row),
+      resolved_at: null,
+      resolution_notes: null,
+      resolver: null,
+      resolvedAt: null,
+      resolutionNotes: null,
+      resolvedBy: null,
+    }));
+  }
 
   const rows = ((data ?? []) as unknown) as RawDamageReportRow[];
   let mapped = rows.map(mapDamageReportRow);

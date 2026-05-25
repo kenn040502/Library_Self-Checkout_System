@@ -73,18 +73,25 @@ export default function DamageReportsViewer({ reports, signedUrls, userRole, ini
     updateParam('q', searchValue.trim() || null);
   };
 
-  const severityChip = (severity: DamageSeverity) => {
+  const severityChip = (severity: DamageSeverity, resolvedAt?: string | null) => {
     const opt = SEVERITY_OPTIONS.find((s) => s.value === severity);
     if (!opt) return null;
     return (
-      <span
-        className={clsx(
-          'inline-flex items-center rounded-pill px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider',
-          opt.color,
+      <div className="flex flex-col gap-1">
+        <span
+          className={clsx(
+            'inline-flex items-center rounded-pill px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider',
+            opt.color,
+          )}
+        >
+          {opt.label}
+        </span>
+        {resolvedAt && (
+          <span className="inline-flex items-center gap-1 rounded-pill bg-accent-teal/15 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-accent-teal">
+            Resolved
+          </span>
         )}
-      >
-        {opt.label}
-      </span>
+      </div>
     );
   };
 
@@ -214,7 +221,7 @@ export default function DamageReportsViewer({ reports, signedUrls, userRole, ini
                     <td className="px-3 py-2 align-top font-sans text-[13px] text-ink dark:text-on-dark">
                       {formatDate(r.createdAt)}
                     </td>
-                    <td className="px-3 py-2 align-top">{severityChip(r.severity)}</td>
+                    <td className="px-3 py-2 align-top">{severityChip(r.severity, r.resolvedAt)}</td>
                     <td className="px-3 py-2 align-top">
                       <p className="font-sans text-[14px] font-semibold text-ink dark:text-on-dark">
                         {r.copy?.book?.title ?? '—'}

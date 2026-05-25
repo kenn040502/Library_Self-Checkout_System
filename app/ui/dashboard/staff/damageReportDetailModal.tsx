@@ -1,28 +1,26 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  XMarkIcon,
+  CheckCircleIcon,
+} from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import type { DamageReportRow, DamageSeverity } from '@/app/lib/supabase/queries';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '@/app/ui/dashboard/confirmModal';
-import { deleteDamageReportAction, updateDamageReportAction } from '@/app/dashboard/damageActions';
+import {
+  deleteDamageReportAction,
+  updateDamageReportAction,
+  resolveDamageReportAction,
+} from '@/app/dashboard/damageActions';
 
-// Severity palette remap from raw amber/rose/sky to semantic tokens
-// (extends Chat 12 STAGE_STYLES + Chat 14 STATUS_STYLE precedent).
 const SEVERITY_LABEL: Record<DamageSeverity, { label: string; color: string }> = {
-  damaged: {
-    label: 'Damaged',
-    color: 'bg-warning/15 text-warning',
-  },
-  lost: {
-    label: 'Lost',
-    color: 'bg-primary/15 text-primary',
-  },
-  needs_inspection: {
-    label: 'Needs inspection',
-    color: 'bg-accent-teal/15 text-accent-teal',
-  },
+  damaged: { label: 'Damaged', color: 'bg-warning/15 text-warning' },
+  lost: { label: 'Lost', color: 'bg-primary/15 text-primary' },
+  needs_inspection: { label: 'Needs inspection', color: 'bg-accent-teal/15 text-accent-teal' },
 };
 
 type Props = {
@@ -34,18 +32,21 @@ type Props = {
 
 export default function DamageReportDetailModal({ report, signedUrls, userRole, onClose }: Props) {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmResolveOpen, setConfirmResolveOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editSeverity, setEditSeverity] = useState<DamageSeverity>('damaged');
   const [editNotes, setEditNotes] = useState('');
+  const [resolveNotes, setResolveNotes] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [deletePending, startDeleteTransition] = useTransition();
   const [updatePending, startUpdateTransition] = useTransition();
+  const [resolvePending, startResolveTransition] = useTransition();
 
-  // Reset edit fields whenever a new report is opened or the modal is closed.
   useEffect(() => {
     if (report) {
       setEditSeverity(report.severity);
       setEditNotes(report.notes ?? '');
+      setResolveNotes('');
       setIsEditing(false);
       setActionError(null);
     }
@@ -54,18 +55,30 @@ export default function DamageReportDetailModal({ report, signedUrls, userRole, 
   if (!report) return null;
 
   const sev = SEVERITY_LABEL[report.severity];
+  const isResolved = Boolean(report.resolvedAt);
+  const canResolve = !isResolved && (userRole === 'staff' || userRole === 'admin');
   const canDelete = userRole === 'staff' || userRole === 'admin';
-  const canEdit = userRole === 'admin';
+  const canEdit = userRole === 'admin' && !isResolved;
 
   const handleDelete = () => {
     setConfirmDeleteOpen(false);
     setActionError(null);
     startDeleteTransition(async () => {
       const result = await deleteDamageReportAction(report.id);
-      if (!result.ok) {
-        setActionError(result.error);
-        return;
-      }
+      if (!result.ok) { setActionError(result.error); return; }
+      onClose();
+    });
+  };
+
+  const handleResolve = () => {
+    setConfirmResolveOpen(false);
+    setActionError(null);
+    startResolveTransition(async () => {
+      const result = await resolveDamageReportAction({
+        reportId: report.id,
+        resolutionNotes: resolveNotes,
+      });
+      if (!result.ok) { setActionError(result.error); return; }
       onClose();
     });
   };
@@ -78,14 +91,12 @@ export default function DamageReportDetailModal({ report, signedUrls, userRole, 
         severity: editSeverity,
         notes: editNotes,
       });
-      if (!result.ok) {
-        setActionError(result.error);
-        return;
-      }
+      if (!result.ok) { setActionError(result.error); return; }
       setIsEditing(false);
       onClose();
     });
   };
+
   const formatDate = (iso: string | null | undefined) =>
     iso
       ? new Date(iso).toLocaleString('en-MY', {
@@ -106,6 +117,7 @@ export default function DamageReportDetailModal({ report, signedUrls, userRole, 
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-card border border-hairline bg-surface-card p-6 shadow-[0_4px_16px_rgba(20,20,19,0.08)] dark:border-dark-hairline dark:bg-dark-surface-card">
+
         {/* Header */}
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -134,7 +146,30 @@ export default function DamageReportDetailModal({ report, signedUrls, userRole, 
           </button>
         </div>
 
-        {/* Severity */}
+        {/* Resolved banner */}
+        {isResolved && (
+          <div className="mb-4 flex items-start gap-3 rounded-card border border-accent-teal/30 bg-accent-teal/8 px-4 py-3">
+            <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent-teal" />
+            <div className="min-w-0">
+              <p className="font-sans text-body-sm font-semibold text-accent-teal">
+                Repaired — back in circulation
+              </p>
+              <p className="mt-0.5 font-sans text-caption text-ink/70 dark:text-on-dark/70">
+                Resolved {formatDate(report.resolvedAt)}
+                {report.resolvedBy
+                  ? ` by ${report.resolvedBy.displayName ?? report.resolvedBy.email}`
+                  : ''}
+              </p>
+              {report.resolutionNotes && (
+                <p className="mt-1 font-sans text-caption text-ink/80 dark:text-on-dark/80">
+                  {report.resolutionNotes}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Severity + action buttons */}
         <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
           {isEditing ? (
             <label className="flex items-center gap-2">
@@ -162,8 +197,7 @@ export default function DamageReportDetailModal({ report, signedUrls, userRole, 
             </span>
           )}
 
-          {/* Edit / Delete buttons */}
-          {!isEditing && (canEdit || canDelete) && (
+          {!isEditing && (canEdit || canResolve || canDelete) && (
             <div className="flex items-center gap-2">
               {canEdit && (
                 <button
@@ -173,6 +207,17 @@ export default function DamageReportDetailModal({ report, signedUrls, userRole, 
                 >
                   <PencilSquareIcon className="h-4 w-4" />
                   Edit
+                </button>
+              )}
+              {canResolve && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmResolveOpen(true)}
+                  disabled={resolvePending}
+                  className="inline-flex items-center gap-1.5 rounded-btn border border-accent-teal/40 bg-canvas px-3 py-1.5 font-sans text-button text-accent-teal transition hover:bg-accent-teal/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-accent-teal/40 dark:bg-dark-surface-soft"
+                >
+                  <CheckCircleIcon className="h-4 w-4" />
+                  {resolvePending ? 'Resolving…' : 'Mark as repaired'}
                 </button>
               )}
               {canDelete && (
@@ -328,7 +373,64 @@ export default function DamageReportDetailModal({ report, signedUrls, userRole, 
         </div>
       </div>
 
-      {/* Delete confirmation modal */}
+      {/* Resolve confirmation — includes resolution notes */}
+      {confirmResolveOpen && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+        >
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setConfirmResolveOpen(false)}
+          />
+          <div className="relative w-full max-w-md rounded-card border border-hairline bg-surface-card p-6 shadow-lg dark:border-dark-hairline dark:bg-dark-surface-card">
+            <h3 className="mb-1 font-display text-display-sm text-ink dark:text-on-dark">
+              Mark as repaired?
+            </h3>
+            <p className="mb-4 font-sans text-body-sm text-muted dark:text-on-dark-soft">
+              This will restore{' '}
+              <span className="font-semibold text-ink dark:text-on-dark">
+                {report.copy?.book?.title ?? report.copy?.barcode ?? 'this copy'}
+              </span>{' '}
+              to circulation and notify any patron waiting on hold.
+            </p>
+            <label className="mb-4 block">
+              <span className="mb-1 block font-sans text-caption-uppercase text-muted dark:text-on-dark-soft">
+                Resolution notes (optional)
+              </span>
+              <textarea
+                value={resolveNotes}
+                onChange={(e) => setResolveNotes(e.target.value)}
+                rows={3}
+                placeholder="e.g. Cover replaced, pages rebound…"
+                className="w-full rounded-card border border-hairline bg-canvas p-3 font-sans text-body-sm text-ink placeholder:text-muted-soft focus:border-accent-teal/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/40 dark:border-dark-hairline dark:bg-dark-canvas dark:text-on-dark"
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmResolveOpen(false)}
+                className="inline-flex items-center rounded-btn border border-hairline bg-surface-card px-4 py-2 font-sans text-button text-ink transition hover:bg-surface-cream-strong dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResolve}
+                disabled={resolvePending}
+                className="inline-flex items-center gap-1.5 rounded-btn bg-accent-teal px-4 py-2 font-sans text-button text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <CheckCircleIcon className="h-4 w-4" />
+                {resolvePending ? 'Resolving…' : 'Confirm — mark as repaired'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {/* Delete confirmation */}
       <ConfirmModal
         isOpen={confirmDeleteOpen}
         type="danger"

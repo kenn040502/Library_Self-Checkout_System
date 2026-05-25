@@ -23,6 +23,9 @@ export default async function BookDetailPage({ params }: PageProps) {
   const total = book.totalCopies ?? book.copies.length;
   const onLoan = (book.copies ?? []).filter((c) => c.status === 'on_loan').length;
   const canBorrow = available > 0;
+  // True when every copy is damaged / lost / processing — none available, none on loan.
+  const allOutOfCirculation = total > 0 && available === 0 && onLoan === 0;
+  const isStudent = user.role === 'user';
 
   const tags = book.tags ?? [];
   const canEdit = user.role === 'staff' || user.role === 'admin';
@@ -89,7 +92,7 @@ export default async function BookDetailPage({ params }: PageProps) {
                     Availability
                   </p>
                   <p className="mt-1 font-display text-display-sm text-ink dark:text-on-dark">
-                    {available} of {total} available
+                    {allOutOfCirculation ? 'All copies unavailable' : `${available} of ${total} available`}
                   </p>
                   {onLoan > 0 && (
                     <p className="mt-0.5 font-sans text-body-sm text-muted-soft dark:text-on-dark-soft">
@@ -101,10 +104,12 @@ export default async function BookDetailPage({ params }: PageProps) {
                   className={
                     canBorrow
                       ? 'rounded-pill bg-success/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-success'
-                      : 'rounded-pill bg-primary/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary dark:bg-dark-primary/20 dark:text-dark-primary'
+                      : allOutOfCirculation
+                        ? 'rounded-pill bg-warning/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-warning'
+                        : 'rounded-pill bg-primary/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary dark:bg-dark-primary/20 dark:text-dark-primary'
                   }
                 >
-                  {canBorrow ? 'Available' : 'On loan'}
+                  {canBorrow ? 'Available' : allOutOfCirculation ? 'Unavailable' : 'On loan'}
                 </span>
               </div>
 
@@ -117,6 +122,10 @@ export default async function BookDetailPage({ params }: PageProps) {
                     <QrCodeIcon className="h-4 w-4" />
                     Borrow this book
                   </Link>
+                ) : allOutOfCirculation && isStudent ? (
+                  <p className="font-sans text-body-sm text-muted dark:text-on-dark-soft">
+                    This copy is currently unavailable due to damage or maintenance. Please check back later.
+                  </p>
                 ) : (
                   <PlaceHoldButton bookId={book.id} patronId={user.id} bookTitle={book.title} />
                 )}

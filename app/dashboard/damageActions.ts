@@ -2,6 +2,11 @@
 
 import { getDashboardSession } from '@/app/lib/auth/session';
 import { getSupabaseServerClient } from '@/app/lib/supabase/server';
+import { promoteNextHoldForBook } from '@/app/lib/supabase/queries';
+import {
+  createNotification,
+  createUserNotification,
+} from '@/app/lib/supabase/notifications';
 
 export type DamagePhotoUploadResult =
   | { status: 'success'; urls: string[] }
@@ -51,7 +56,6 @@ export async function uploadDamagePhotos(formData: FormData): Promise<DamagePhot
       .from('damage-reports')
       .upload(path, file, { cacheControl: '3600', upsert: false });
     if (uploadError) {
-      // rollback any uploads done so far
       if (uploadedPaths.length > 0) {
         await supabase.storage.from('damage-reports').remove(uploadedPaths);
       }
@@ -67,9 +71,81 @@ export async function uploadDamagePhotos(formData: FormData): Promise<DamagePhot
 
 export type DamageActionResult = { ok: true } | { ok: false; error: string };
 
+// Shared type for the pre-action report lookup.
+type ReportLookup = {
+  id: string;
+  severity: string;
+  photo_urls: string[] | null;
+  copy_id: string | null;
+  copy: {
+    book: { id: string | null; title: string | null } | null;
+    barcode: string | null;
+    status: string | null;
+  } | null;
+};
+
+const REPORT_LOOKUP_SELECT =
+  'id, severity, photo_urls, copy_id, copy:Copies(book:Books(id, title), barcode, status)';
+
 /**
- * Delete a damage report. Allowed for staff/admin. Also removes the photo
- * objects from storage and broadcasts a notification to staff/admin.
+ * After a copy is restored to 'available', promote the next queued hold for
+ * the book and notify the waiting patron.
+ */
+async function promoteHoldAndNotify(bookId: string, bookTitle: string): Promise<void> {
+  try {
+    const promotion = await promoteNextHoldForBook(bookId);
+    if (promotion) {
+      const expiryLabel = new Date(promotion.expiresAt).toLocaleDateString('en-MY', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      await createUserNotification(
+        promotion.patronId,
+        'hold_ready',
+        'Your hold is ready for pickup',
+        `"${bookTitle}" is now available. Collect it by ${expiryLabel}.`,
+        { bookTitle, holdId: promotion.promotedHoldId, expiresAt: promotion.expiresAt },
+      );
+    }
+  } catch (err) {
+    console.warn('[damageActions] hold promotion failed', err);
+  }
+}
+
+/**
+ * Reset a copy to 'available' if it was locked by the damage flow.
+ * Returns the book_id for use in hold promotion, or null if nothing was reset.
+ */
+async function resetCopyIfDamaged(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  report: ReportLookup,
+): Promise<string | null> {
+  const copyId = report.copy_id;
+  const currentStatus = report.copy?.status;
+  if (
+    !copyId ||
+    (currentStatus !== 'damaged' && currentStatus !== 'lost' && currentStatus !== 'processing')
+  ) {
+    return null;
+  }
+
+  const { error } = await supabase
+    .from('Copies')
+    .update({ status: 'available' })
+    .eq('id', copyId);
+  if (error) {
+    console.error('[damageActions] copy status reset failed', error);
+    return null;
+  }
+
+  return report.copy?.book?.id ?? null;
+}
+
+/**
+ * Delete a damage report. Allowed for staff/admin.
+ * Resets the copy to 'available', promotes any queued hold, removes photos,
+ * and broadcasts a staff/admin notification.
  */
 export async function deleteDamageReportAction(reportId: string): Promise<DamageActionResult> {
   const { user } = await getDashboardSession();
@@ -81,19 +157,11 @@ export async function deleteDamageReportAction(reportId: string): Promise<Damage
 
   const supabase = getSupabaseServerClient();
 
-  // Look up the report (and joined book title) BEFORE delete so we can:
-  //   1. Remove the photo objects from storage afterwards.
-  //   2. Name the book in the broadcast notification.
   const { data: report, error: lookupError } = await supabase
     .from('DamageReports')
-    .select('id, severity, photo_urls, copy:Copies(book:Books(title), barcode)')
+    .select(REPORT_LOOKUP_SELECT)
     .eq('id', reportId)
-    .maybeSingle<{
-      id: string;
-      severity: string;
-      photo_urls: string[] | null;
-      copy: { book: { title: string | null } | null; barcode: string | null } | null;
-    }>();
+    .maybeSingle<ReportLookup>();
 
   if (lookupError) {
     console.error('[deleteDamageReportAction] lookup failed', lookupError);
@@ -113,7 +181,12 @@ export async function deleteDamageReportAction(reportId: string): Promise<Damage
     return { ok: false, error: deleteError.message ?? 'Could not delete the report.' };
   }
 
-  // Remove the photo objects from storage (best-effort, non-fatal).
+  const bookId = await resetCopyIfDamaged(supabase, report);
+  if (bookId) {
+    await promoteHoldAndNotify(bookId, bookTitle);
+  }
+
+  // Remove photos from storage (best-effort).
   const paths = (report.photo_urls ?? []).filter((p) => typeof p === 'string' && p.length > 0);
   if (paths.length > 0) {
     await supabase.storage.from('damage-reports').remove(paths).catch((err) => {
@@ -121,24 +194,91 @@ export async function deleteDamageReportAction(reportId: string): Promise<Damage
     });
   }
 
-  // Broadcast to staff/admin.
   try {
-    const { createNotification } = await import('@/app/lib/supabase/notifications');
     const actorName = user.name ?? user.username ?? user.email ?? 'Library staff';
     await createNotification(
       'damage_report',
       'Damage report deleted',
       `${actorName} deleted the damage report for "${bookTitle}".`,
-      {
-        action: 'deleted',
-        bookTitle,
-        actorName,
-        severity: report.severity,
-        reportId,
-      },
+      { action: 'deleted', bookTitle, actorName, severity: report.severity, reportId },
     );
   } catch (err) {
     console.warn('[deleteDamageReportAction] notification failed', err);
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Mark a damage report as resolved (book repaired / back in circulation).
+ * Allowed for staff/admin. Keeps the historical record intact; sets
+ * resolved_at + resolved_by + optional resolution_notes, resets the copy
+ * to 'available', and promotes any queued hold for that book.
+ */
+export async function resolveDamageReportAction(input: {
+  reportId: string;
+  resolutionNotes?: string | null;
+}): Promise<DamageActionResult> {
+  const { user } = await getDashboardSession();
+  if (!user) return { ok: false, error: 'You must be signed in.' };
+  if (user.role !== 'staff' && user.role !== 'admin') {
+    return { ok: false, error: 'Only staff or admin can resolve damage reports.' };
+  }
+  if (!input.reportId) return { ok: false, error: 'Missing report id.' };
+
+  const supabase = getSupabaseServerClient();
+
+  const { data: report, error: lookupError } = await supabase
+    .from('DamageReports')
+    .select(REPORT_LOOKUP_SELECT)
+    .eq('id', input.reportId)
+    .is('resolved_at', null)
+    .maybeSingle<ReportLookup>();
+
+  if (lookupError) {
+    console.error('[resolveDamageReportAction] lookup failed', lookupError);
+    return { ok: false, error: 'Could not load the damage report.' };
+  }
+  if (!report) return { ok: false, error: 'Report not found or already resolved.' };
+
+  const bookTitle = report.copy?.book?.title ?? report.copy?.barcode ?? 'Unknown book';
+  const trimmedNotes = (input.resolutionNotes ?? '').trim();
+
+  const { error: resolveError } = await supabase
+    .from('DamageReports')
+    .update({
+      resolved_at: new Date().toISOString(),
+      resolved_by: user.id,
+      resolution_notes: trimmedNotes.length > 0 ? trimmedNotes : null,
+    })
+    .eq('id', input.reportId);
+
+  if (resolveError) {
+    console.error('[resolveDamageReportAction] resolve failed', resolveError);
+    return { ok: false, error: resolveError.message ?? 'Could not resolve the report.' };
+  }
+
+  const bookId = await resetCopyIfDamaged(supabase, report);
+  if (bookId) {
+    await promoteHoldAndNotify(bookId, bookTitle);
+  }
+
+  try {
+    const actorName = user.name ?? user.username ?? user.email ?? 'Library staff';
+    await createNotification(
+      'damage_report',
+      'Book repaired — back in circulation',
+      `${actorName} marked "${bookTitle}" as repaired and returned it to circulation.`,
+      {
+        action: 'resolved',
+        bookTitle,
+        actorName,
+        severity: report.severity,
+        reportId: input.reportId,
+      },
+    );
+  } catch (err) {
+    console.warn('[resolveDamageReportAction] notification failed', err);
   }
 
   return { ok: true };
@@ -190,7 +330,6 @@ export async function updateDamageReportAction(input: {
   const bookTitle = updated.copy?.book?.title ?? updated.copy?.barcode ?? 'Unknown book';
 
   try {
-    const { createNotification } = await import('@/app/lib/supabase/notifications');
     const actorName = user.name ?? user.username ?? user.email ?? 'Admin';
     await createNotification(
       'damage_report',

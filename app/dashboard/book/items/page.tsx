@@ -80,8 +80,16 @@ export default async function BookItemsPage({
   const rawCategory = qp('category');
   const category: CategoryKey = isCategoryKey(rawCategory) ? rawCategory : 'all';
 
+  const isStaff = user.role !== 'user';
+
   const dbBooks = await fetchBooks(q);
   let books = (dbBooks ?? []).map(toUIBook);
+
+  // Students should not see books whose every copy is out of circulation
+  // (damaged / lost / processing). Staff need to see them for inventory management.
+  if (!isStaff) {
+    books = books.filter((b) => b.status !== 'maintenance');
+  }
 
   if (statusFilter) {
     books = books.filter((b) => b.status === statusFilter);
@@ -102,7 +110,6 @@ export default async function BookItemsPage({
     return 0;
   });
 
-  const isStaff = user.role !== 'user';
   return (
     <>
       <title>Book Catalogue | Dashboard</title>

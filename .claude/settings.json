@@ -6,7 +6,12 @@
       "Bash(pnpm tsc *)",
       "Bash(npx tsc *)",
       "Bash(npx supabase *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(dir 'c:\\\\Users\\\\User\\\\Documents\\\\GitHub\\\\Library_Self-Checkout_System\\\\app')",
+      "Bash(xargs grep -l \"Copies\\\\|status\")",
+      "Bash(dir \"c:\\\\Users\\\\User\\\\Documents\\\\GitHub\\\\Library_Self-Checkout_System\\\\app\\\\dashboard\\\\book\")",
+      "Bash(dir \"c:\\\\Users\\\\User\\\\Documents\\\\GitHub\\\\Library_Self-Checkout_System\\\\app\\\\ui\\\\dashboard\")",
+      "Bash(findstr \"book\")"
     ]
   },
   "enabledPlugins": {
