@@ -7,7 +7,9 @@ export type NotificationType =
   | 'due_soon'
   | 'hold_ready'
   | 'hold_placed'
-  | 'hold_cancelled';
+  | 'hold_cancelled'
+  | 'hold_expired'
+  | 'damage_report';
 
 export type NotificationFilter = 'all' | 'read' | 'unread' | 'flagged';
 
@@ -64,6 +66,21 @@ export async function createUserNotification(
     metadata: metadata ?? null,
   });
   if (error) console.error('[notifications] createUserNotification error:', error.message);
+}
+
+/**
+ * Returns true if a hold_expired notification was already created for this hold.
+ * Used by the expire-check sweeper to avoid spamming patrons/staff with
+ * duplicate notifications on every dashboard load.
+ */
+export async function holdExpiredNotificationExists(holdId: string): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const { count } = await supabase
+    .from('Notifications')
+    .select('id', { head: true, count: 'exact' })
+    .eq('type', 'hold_expired')
+    .contains('metadata', { holdId });
+  return (count ?? 0) > 0;
 }
 
 /** Returns true if a due_soon notification was already sent for this loan+user TODAY (idempotency guard). */

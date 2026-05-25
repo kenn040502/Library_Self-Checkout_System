@@ -11,6 +11,7 @@ import {
   EnvelopeOpenIcon,
   StarIcon,
   XCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import type { NotificationType } from '@/app/lib/supabase/notifications';
@@ -26,10 +27,12 @@ const TYPE_STYLES: Record<NotificationType, IconSpec> = {
   hold_ready:     { icon: BookmarkIcon,              text: 'text-primary dark:text-dark-primary', bg: 'bg-primary/10 dark:bg-dark-primary/15' },
   hold_placed:    { icon: BookmarkIcon,              text: 'text-accent-teal',                    bg: 'bg-accent-teal/10' },
   hold_cancelled: { icon: XCircleIcon,               text: 'text-error',                           bg: 'bg-error/10' },
+  hold_expired:   { icon: ClockIcon,                 text: 'text-warning',                        bg: 'bg-warning/10' },
   due_soon:       { icon: ClockIcon,                 text: 'text-warning',                        bg: 'bg-warning/10' },
   checkout:       { icon: ArrowRightOnRectangleIcon, text: 'text-accent-amber',                   bg: 'bg-accent-amber/12' },
   checkin:        { icon: CheckCircleIcon,           text: 'text-success',                        bg: 'bg-success/10' },
   loan_confirmed: { icon: CheckCircleIcon,           text: 'text-success',                        bg: 'bg-success/10' },
+  damage_report:  { icon: ExclamationTriangleIcon,   text: 'text-warning',                        bg: 'bg-warning/10' },
 };
 
 const FALLBACK: IconSpec = {

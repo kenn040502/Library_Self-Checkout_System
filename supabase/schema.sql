@@ -283,7 +283,8 @@ CREATE TABLE "Notifications" (
     type            text NOT NULL
                     CHECK (type = ANY (ARRAY[
                         'checkout','checkin','loan_confirmed',
-                        'due_soon','hold_ready','hold_placed','hold_cancelled'])),
+                        'due_soon','hold_ready','hold_placed','hold_cancelled',
+                        'hold_expired','damage_report'])),
     title           text NOT NULL,
     message         text NOT NULL,
     target_roles    text[] NOT NULL DEFAULT '{staff,admin}',

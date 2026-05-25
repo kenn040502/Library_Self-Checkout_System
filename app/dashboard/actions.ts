@@ -855,6 +855,55 @@ export async function checkinBookAction(
         notes: conditionNotes || null,
         photoUrls: damagePhotoUrls,
       });
+
+      // Notify staff/admin about the new damage report
+      (async () => {
+        try {
+          const reportedBookId = loan.copy?.book_id ?? null;
+          let bookTitle = loan.copy?.barcode ?? 'Unknown book';
+          if (reportedBookId) {
+            const { data: bookRow } = await supabase
+              .from('Books')
+              .select('title')
+              .eq('id', reportedBookId)
+              .maybeSingle<{ title: string }>();
+            if (bookRow?.title) bookTitle = bookRow.title;
+          }
+
+          let reporterName = 'Library staff';
+          if (handlerId) {
+            const { data: reporter } = await supabase
+              .from('Users')
+              .select('email, profile:UserProfile(display_name)')
+              .eq('id', handlerId)
+              .maybeSingle<{
+                email: string | null;
+                profile: { display_name: string | null } | null;
+              }>();
+            reporterName =
+              reporter?.profile?.display_name ?? reporter?.email ?? 'Library staff';
+          }
+
+          const severityLabel = severity === 'needs_inspection' ? 'needs inspection' : severity;
+
+          await createNotification(
+            'damage_report',
+            'New damage report',
+            `${reporterName} reported "${bookTitle}" as ${severityLabel}.`,
+            {
+              action: 'reported',
+              bookTitle,
+              barcode: loan.copy?.barcode ?? '',
+              severity,
+              reporterName,
+              loanId: loan.id,
+              photoCount: String(damagePhotoUrls.length),
+            },
+          );
+        } catch (err) {
+          console.warn('[notifications] damage_report notification failed:', err);
+        }
+      })().catch(() => {});
     } catch (error) {
       console.error('Failed to persist damage report', error);
       // Non-fatal — the return succeeded, the copy is in the right state.

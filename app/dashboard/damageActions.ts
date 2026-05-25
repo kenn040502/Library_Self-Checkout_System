@@ -64,3 +64,149 @@ export async function uploadDamagePhotos(formData: FormData): Promise<DamagePhot
 
   return { status: 'success', urls };
 }
+
+export type DamageActionResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Delete a damage report. Allowed for staff/admin. Also removes the photo
+ * objects from storage and broadcasts a notification to staff/admin.
+ */
+export async function deleteDamageReportAction(reportId: string): Promise<DamageActionResult> {
+  const { user } = await getDashboardSession();
+  if (!user) return { ok: false, error: 'You must be signed in.' };
+  if (user.role !== 'staff' && user.role !== 'admin') {
+    return { ok: false, error: 'Only staff or admin can delete damage reports.' };
+  }
+  if (!reportId) return { ok: false, error: 'Missing report id.' };
+
+  const supabase = getSupabaseServerClient();
+
+  // Look up the report (and joined book title) BEFORE delete so we can:
+  //   1. Remove the photo objects from storage afterwards.
+  //   2. Name the book in the broadcast notification.
+  const { data: report, error: lookupError } = await supabase
+    .from('DamageReports')
+    .select('id, severity, photo_urls, copy:Copies(book:Books(title), barcode)')
+    .eq('id', reportId)
+    .maybeSingle<{
+      id: string;
+      severity: string;
+      photo_urls: string[] | null;
+      copy: { book: { title: string | null } | null; barcode: string | null } | null;
+    }>();
+
+  if (lookupError) {
+    console.error('[deleteDamageReportAction] lookup failed', lookupError);
+    return { ok: false, error: 'Could not load the damage report.' };
+  }
+  if (!report) return { ok: false, error: 'Report not found.' };
+
+  const bookTitle = report.copy?.book?.title ?? report.copy?.barcode ?? 'Unknown book';
+
+  const { error: deleteError } = await supabase
+    .from('DamageReports')
+    .delete()
+    .eq('id', reportId);
+
+  if (deleteError) {
+    console.error('[deleteDamageReportAction] delete failed', deleteError);
+    return { ok: false, error: deleteError.message ?? 'Could not delete the report.' };
+  }
+
+  // Remove the photo objects from storage (best-effort, non-fatal).
+  const paths = (report.photo_urls ?? []).filter((p) => typeof p === 'string' && p.length > 0);
+  if (paths.length > 0) {
+    await supabase.storage.from('damage-reports').remove(paths).catch((err) => {
+      console.warn('[deleteDamageReportAction] photo cleanup failed', err);
+    });
+  }
+
+  // Broadcast to staff/admin.
+  try {
+    const { createNotification } = await import('@/app/lib/supabase/notifications');
+    const actorName = user.name ?? user.username ?? user.email ?? 'Library staff';
+    await createNotification(
+      'damage_report',
+      'Damage report deleted',
+      `${actorName} deleted the damage report for "${bookTitle}".`,
+      {
+        action: 'deleted',
+        bookTitle,
+        actorName,
+        severity: report.severity,
+        reportId,
+      },
+    );
+  } catch (err) {
+    console.warn('[deleteDamageReportAction] notification failed', err);
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Update a damage report's severity and/or notes. Admin only.
+ */
+export async function updateDamageReportAction(input: {
+  reportId: string;
+  severity?: 'damaged' | 'lost' | 'needs_inspection';
+  notes?: string | null;
+}): Promise<DamageActionResult> {
+  const { user } = await getDashboardSession();
+  if (!user) return { ok: false, error: 'You must be signed in.' };
+  if (user.role !== 'admin') {
+    return { ok: false, error: 'Only admin can edit damage reports.' };
+  }
+  if (!input.reportId) return { ok: false, error: 'Missing report id.' };
+
+  const supabase = getSupabaseServerClient();
+
+  const updates: Record<string, unknown> = {};
+  if (input.severity) updates.severity = input.severity;
+  if (input.notes !== undefined) {
+    const trimmed = (input.notes ?? '').trim();
+    updates.notes = trimmed.length > 0 ? trimmed : null;
+  }
+  if (Object.keys(updates).length === 0) {
+    return { ok: false, error: 'No changes to save.' };
+  }
+
+  const { data: updated, error } = await supabase
+    .from('DamageReports')
+    .update(updates)
+    .eq('id', input.reportId)
+    .select('id, copy:Copies(book:Books(title), barcode)')
+    .maybeSingle<{
+      id: string;
+      copy: { book: { title: string | null } | null; barcode: string | null } | null;
+    }>();
+
+  if (error) {
+    console.error('[updateDamageReportAction] update failed', error);
+    return { ok: false, error: error.message ?? 'Could not update the report.' };
+  }
+  if (!updated) return { ok: false, error: 'Report not found.' };
+
+  const bookTitle = updated.copy?.book?.title ?? updated.copy?.barcode ?? 'Unknown book';
+
+  try {
+    const { createNotification } = await import('@/app/lib/supabase/notifications');
+    const actorName = user.name ?? user.username ?? user.email ?? 'Admin';
+    await createNotification(
+      'damage_report',
+      'Damage report updated',
+      `${actorName} updated the damage report for "${bookTitle}".`,
+      {
+        action: 'updated',
+        bookTitle,
+        actorName,
+        ...(input.severity ? { severity: input.severity } : {}),
+        reportId: input.reportId,
+      },
+    );
+  } catch (err) {
+    console.warn('[updateDamageReportAction] notification failed', err);
+  }
+
+  return { ok: true };
+}

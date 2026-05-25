@@ -360,7 +360,15 @@ export default function CheckInForm({
 
       <DamageReportModal
         open={damageOpen}
-        loanId={mode === 'patron' ? patronLoanId || null : null}
+        loanId={
+          mode === 'patron'
+            ? patronLoanId || null
+            // In scan mode we don't have the resolved loan ID yet — use the
+            // typed barcode/loan-id as the upload-path prefix. The final
+            // damage_report row picks up the real loan_id when the return
+            // submits, so this only affects where the photos sit in storage.
+            : identifier.trim() || null
+        }
         onClose={() => setDamageOpen(false)}
         onSubmit={handleDamageSubmit}
       />

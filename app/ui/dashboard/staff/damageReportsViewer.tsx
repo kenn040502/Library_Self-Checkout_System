@@ -29,6 +29,7 @@ const RANGE_OPTIONS = [
 type Props = {
   reports: DamageReportRow[];
   signedUrls: Record<string, string | null>;
+  userRole?: 'admin' | 'staff' | 'user';
   initialFilters: {
     severity: DamageSeverity[];
     range: string;
@@ -36,13 +37,16 @@ type Props = {
   };
 };
 
-export default function DamageReportsViewer({ reports, signedUrls, initialFilters }: Props) {
+export default function DamageReportsViewer({ reports, signedUrls, userRole, initialFilters }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [searchValue, setSearchValue] = useState(initialFilters.q);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
+
+  // CSV export keeps the current filters in the URL.
+  const exportHref = `${pathname}/export?${searchParams?.toString() ?? ''}`;
 
   const openReport = useMemo(
     () => reports.find((r) => r.id === openReportId) ?? null,
@@ -121,6 +125,15 @@ export default function DamageReportsViewer({ reports, signedUrls, initialFilter
             </option>
           ))}
         </select>
+
+        {/* Export CSV (staff & admin) */}
+        <a
+          href={exportHref}
+          download
+          className="inline-flex h-10 items-center rounded-btn border border-hairline bg-surface-card px-4 font-sans text-body-sm font-medium text-ink transition hover:bg-surface-cream-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas dark:border-dark-hairline dark:bg-dark-surface-card dark:text-on-dark dark:hover:bg-dark-surface-strong dark:focus-visible:ring-offset-dark-canvas"
+        >
+          Export CSV
+        </a>
       </div>
 
       {/* Severity pills */}
@@ -267,7 +280,11 @@ export default function DamageReportsViewer({ reports, signedUrls, initialFilter
       <DamageReportDetailModal
         report={openReport}
         signedUrls={signedUrls}
-        onClose={() => setOpenReportId(null)}
+        userRole={userRole}
+        onClose={() => {
+          setOpenReportId(null);
+          router.refresh();
+        }}
       />
     </div>
   );

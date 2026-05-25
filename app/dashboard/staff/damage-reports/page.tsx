@@ -67,6 +67,7 @@ export default async function DamageReportsPage({
         <DamageReportsViewer
           reports={reports}
           signedUrls={signedMap}
+          userRole={user.role}
           initialFilters={{
             severity: severityFilter ?? [],
             range: params.range ?? 'all',

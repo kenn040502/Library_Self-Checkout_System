@@ -6,6 +6,7 @@ import DesktopTopBar from '@/app/ui/dashboard/desktopTopBar';
 import FaqFloatingHelp from '@/app/ui/dashboard/faqFloatingHelp';
 import NotificationToast from '@/app/ui/dashboard/notificationToast';
 import DueDateChecker from '@/app/ui/dashboard/dueDateChecker';
+import HoldExpireChecker from '@/app/ui/dashboard/holdExpireChecker';
 import FaqScrollTopButton from '@/app/ui/dashboard/faqScrollTopButton';
 import type { DashboardUserProfile } from '@/app/lib/auth/types';
 import { Suspense, useState } from 'react';
@@ -60,6 +61,9 @@ export default function DashboardShell({ user, isBypassed, children }: Dashboard
       )}
       {(user.role === 'staff' || user.role === 'admin') && <NotificationToast />}
       {user.role === 'user' && <DueDateChecker />}
+      {/* Hold expiry sweeper — fires on every dashboard load (all roles). Idempotent
+          server-side, so each expired hold only notifies once. */}
+      <HoldExpireChecker />
     </div>
   );
 }
