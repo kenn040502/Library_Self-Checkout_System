@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { XMarkIcon, PhotoIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { uploadDamagePhotos } from '@/app/dashboard/damageActions';
@@ -43,9 +44,12 @@ export default function DamageReportModal({ open, loanId, onClose, onSubmit }: D
   const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  if (!open) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleFilesChosen = (files: FileList | null) => {
     if (!files) return;
@@ -107,12 +111,14 @@ export default function DamageReportModal({ open, loanId, onClose, onSubmit }: D
     }
   };
 
-  return (
+  if (!open || !mounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="damage-report-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center sm:p-4"
+      className="fixed inset-0 z-[1000] flex items-end sm:items-center sm:justify-center sm:p-4"
     >
       <div
         className="absolute inset-0 bg-ink/50 dark:bg-dark-canvas/70 backdrop-blur-sm"
@@ -278,6 +284,7 @@ export default function DamageReportModal({ open, loanId, onClose, onSubmit }: D
         </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
