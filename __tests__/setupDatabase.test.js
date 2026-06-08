@@ -1,6 +1,5 @@
 const {
-  BASELINE_SCHEMA,
-  REQUIRED_MIGRATIONS,
+  SETUP_SQL,
   buildSetupPlan,
   isPlaceholderValue,
   parseCliArgs,
@@ -9,14 +8,11 @@ const {
 } = require('../scripts/setup-database.cjs');
 
 describe('setup-database helpers', () => {
-  test('buildSetupPlan runs the baseline schema before required migrations', () => {
+  test('buildSetupPlan runs one consolidated Supabase setup script', () => {
     const plan = buildSetupPlan();
 
-    expect(plan[0]).toBe(BASELINE_SCHEMA);
-    expect(plan.slice(1)).toEqual(REQUIRED_MIGRATIONS);
-    expect(plan).toContain('supabase/migrations/20260507_notification_flags.sql');
-    expect(plan).toContain('supabase/migrations/20260511_drop_ai_chat_history.sql');
-    expect(plan).toContain('supabase/migrations/20260604_damage_reports_resolution.sql');
+    expect(SETUP_SQL).toBe('supabase/setup.sql');
+    expect(plan).toEqual([SETUP_SQL]);
   });
 
   test('resolveDatabaseUrl prefers non-pooling Supabase URL and rejects placeholders', () => {

@@ -1,14 +1,12 @@
 -- ============================================================================
--- Library Self-Checkout System — Consolidated schema baseline
+-- Library Self-Checkout System — All-in-one Supabase setup
 -- ----------------------------------------------------------------------------
 -- Generated 2026-05-08 from live Supabase project zjlebdnlquxkfcdycssy
 -- (organization bjqytaomjxbmxhuvvliz, region ap-southeast-1, Postgres 17.6).
 --
--- This file is a SNAPSHOT of the current production schema, including objects
--- created outside `supabase/migrations/` (most of the base tables were created
--- via Supabase Studio before the migration directory existed). To recreate the
--- database from scratch on a fresh project, run this file once, then apply any
--- newer files in `supabase/migrations/` in chronological order.
+-- This is the handoff setup file for a fresh Supabase project. It starts from
+-- the consolidated production snapshot and includes the final post-snapshot
+-- migrations needed by the application, so clients only need to run this file.
 --
 -- Naming convention (project-wide): tables PascalCase, columns/enums snake_case.
 -- ============================================================================
@@ -664,3 +662,32 @@ CREATE POLICY "Avatar write access 1oj01fe_3"
 -- and add policies. A baseline `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`
 -- block is intentionally omitted from this file because enabling RLS without
 -- policies will block legitimate service-role traffic.
+
+
+-- ---------------------------------------------------------------------------
+-- 14. Final handoff migrations folded into setup
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS "NotificationFlags" (
+    notification_id  uuid NOT NULL REFERENCES "Notifications"(id) ON DELETE CASCADE,
+    user_id          text NOT NULL,
+    flagged_at       timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (notification_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_flags_user
+    ON "NotificationFlags"(user_id);
+
+DROP TABLE IF EXISTS "AiChatHistory";
+
+ALTER TABLE "GeneralChatHistory"
+    ADD COLUMN IF NOT EXISTS metadata jsonb;
+
+ALTER TABLE "DamageReports"
+    ADD COLUMN IF NOT EXISTS resolved_at timestamptz,
+    ADD COLUMN IF NOT EXISTS resolved_by uuid REFERENCES "Users"(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS resolution_notes text;
+
+CREATE INDEX IF NOT EXISTS idx_damage_reports_resolved_at
+    ON "DamageReports"(resolved_at)
+    WHERE resolved_at IS NOT NULL;

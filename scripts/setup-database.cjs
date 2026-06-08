@@ -7,17 +7,10 @@ const path = require('node:path');
 const dotenv = require('dotenv');
 const postgres = require('postgres');
 
-const BASELINE_SCHEMA = 'supabase/schema.sql';
-
-const REQUIRED_MIGRATIONS = [
-  'supabase/migrations/20260507_notification_flags.sql',
-  'supabase/migrations/20260511_drop_ai_chat_history.sql',
-  'supabase/migrations/20260524_general_chat_history_metadata.sql',
-  'supabase/migrations/20260604_damage_reports_resolution.sql',
-];
+const SETUP_SQL = 'supabase/setup.sql';
 
 function buildSetupPlan() {
-  return [BASELINE_SCHEMA, ...REQUIRED_MIGRATIONS];
+  return [SETUP_SQL];
 }
 
 function isPlaceholderValue(value) {
@@ -156,8 +149,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  BASELINE_SCHEMA,
-  REQUIRED_MIGRATIONS,
+  SETUP_SQL,
   buildSetupPlan,
   isPlaceholderValue,
   parseCliArgs,
