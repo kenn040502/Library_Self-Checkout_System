@@ -20,7 +20,7 @@ jest.mock('@/app/ui/magicUi/glassCard', () => ({
 
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => <img {...props} />,
+  default: ({ priority: _priority, fill: _fill, ...props }) => <img {...props} />,
 }));
 
 
@@ -37,6 +37,7 @@ describe('Login Page', () => {
 
 		const logo = screen.getByAltText(/Swinburne logo/i);
 		expect(logo).toBeInTheDocument();
+		expect(logo).toHaveAttribute('src', '/swinburne-logo.png');
 	})
 
 	it('Render Login Button', () => {

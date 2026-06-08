@@ -5,6 +5,9 @@
     "dev": "next dev --turbopack -H 0.0.0.0",
     "dev:webpack": "next dev -H 0.0.0.0",
     "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
+    "db:setup": "node scripts/setup-database.cjs",
+    "db:setup:dry-run": "node scripts/setup-database.cjs --dry-run",
+    "db:setup:with-seed": "node scripts/setup-database.cjs --with-seed",
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch"

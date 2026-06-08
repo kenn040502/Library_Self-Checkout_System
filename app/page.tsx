@@ -38,9 +38,12 @@ export default function HomePage() {
       <header className="fixed left-0 top-0 z-50 flex w-full items-center justify-between px-5 py-4 md:px-8 md:py-6">
         <BlurFade delay={0.1} yOffset={-10}>
           <Link href="/">
-            <img
-              src="https://www.swinburne.edu.my/wp-content/themes/mytheme-2021/images/logo-long-full.svg"
+            <Image
+              src="/swinburne-logo.png"
               alt="Swinburne Logo"
+              width={160}
+              height={80}
+              priority
               className="h-8 md:h-10 w-auto"
             />
           </Link>

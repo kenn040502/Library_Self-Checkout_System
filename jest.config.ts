@@ -21,7 +21,6 @@ const config: Config = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '<rootDir>/.worktrees/',
-    '<rootDir>/.claude/worktrees/',
   ],
 }
  

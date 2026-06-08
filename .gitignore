@@ -17,6 +17,7 @@
 
 # testing
 /coverage
+tsconfig.tsbuildinfo
 
 # environment variables — never commit real secrets
 .env
@@ -41,6 +42,7 @@ pnpm-debug.log*
 
 # pnpm
 .pnpm-store/
+package-lock.json
 
 # vercel
 .vercel
@@ -48,15 +50,40 @@ pnpm-debug.log*
 # tooling caches
 .eslintcache
 
+# agent/tooling state
+.agents/
+.claude/
+.opencode/
+.planning/
+AGENTS.md
+CLAUDE.md
+codex.md
+task_plan.md
+findings.md
+progress.md
+
 # editors
 .idea/
 .vscode/
 
-# Claude Code internals — ignore everything except the shared settings/skills
-# that should travel with the repo so cloud sessions get the same plugins.
-.claude/*
-!.claude/settings.json
-!.claude/skills/
 .worktrees/
+
+# course/report/handoff drafting artifacts
+/design_spec/
+/docs/superpowers/
+/handoff_package/
+/past_sprint_report/
+/reflection_report/
+/worklog/
+/docs/SYSTEM_REPORT.md
+/SYSTEM_REPORT_GAPS.md
+/carryon.md
+/kelvin-contribution-details-draft.md
+/project-review-draft.md
+/project-retrospect-draft.md
+/project-retrospect-rubric-check.md
+/report-writing-order.md
+/sprint-retrospect-draft.md
+/sprint-review-3.2-draft.md
 
 certificates

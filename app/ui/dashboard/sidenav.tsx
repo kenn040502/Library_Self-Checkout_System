@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   HomeIcon,
@@ -144,9 +145,20 @@ export default function SideNav({ user, isBypassed, collapsed = false, onToggle 
 
       {!collapsed && (
         <div className="mb-2 flex items-center justify-between px-3">
-          <p className="font-mono text-[9px] font-semibold uppercase tracking-[1.8px] text-muted-soft dark:text-on-dark-soft">
-            Workspace
-          </p>
+          <Link
+            href="/dashboard"
+            aria-label="Dashboard home"
+            className="inline-flex min-w-0 items-center"
+          >
+            <Image
+              src="/swinburne-logo.png"
+              alt="Swinburne"
+              width={112}
+              height={56}
+              priority
+              className="h-9 w-auto rounded-sm"
+            />
+          </Link>
           {onToggle && (
             <button
               type="button"

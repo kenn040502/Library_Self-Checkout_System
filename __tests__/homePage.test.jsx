@@ -35,6 +35,14 @@ describe('Home Page', () => {
     expect(heading).toBeInTheDocument();
   })
 
+  it('Render local Swinburne logo', () => {
+    render(<HomePage/>)
+
+    const logo = screen.getByAltText(/Swinburne Logo/i)
+
+    expect(logo).toHaveAttribute('src', '/swinburne-logo.png')
+  })
+
   it('Render All Button', () => {
     render(<HomePage/>)
 

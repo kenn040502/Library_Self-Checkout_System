@@ -20,58 +20,6 @@ const FACULTY_TAGS = [
 
 type TagName = (typeof FACULTY_TAGS)[number];
 
-// OpenAI fallback (used when DeepSeek is unavailable/quotaed)
-const getOpenAIEnv = () => {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim();
-  const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
-  return { apiKey, baseUrl, model };
-};
-
-async function callOpenAI(
-  books: MinimalBook[],
-): Promise<Record<string, string[]>> {
-  const { apiKey, baseUrl, model } = getOpenAIEnv();
-  if (!apiKey) throw new Error('OPENAI_API_KEY missing');
-
-  const prompt = buildPrompt(books);
-
-  const response = await fetch(`${baseUrl.replace(/[/]+$/, '')}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-    }),
-  });
-
-  const raw = await response.json().catch(async () => ({
-    fallbackText: await response.text(),
-  }));
-
-  if (!response.ok) {
-    const errText = typeof raw === 'string' ? raw : JSON.stringify(raw);
-    throw new Error(`OpenAI error ${response.status}: ${errText}`);
-  }
-
-  const text: string =
-    raw?.choices?.[0]?.message?.content ?? raw?.fallbackText ?? '';
-
-  if (!text) throw new Error('OpenAI returned empty response');
-
-  try {
-    return JSON.parse(text) as Record<string, string[]>;
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]) as Record<string, string[]>;
-    throw new Error('OpenAI returned non-JSON');
-  }
-}
-
 function inferFallbackTag(book: MinimalBook): TagName {
   const text = [
     book.title ?? '',
@@ -273,20 +221,13 @@ async function callDeepSeek(books: MinimalBook[]): Promise<Record<string, string
 }
 
 async function callLLMWithFallback(books: MinimalBook[]): Promise<Record<string, string[]>> {
-  // Try DeepSeek first, then OpenAI fallback, then heuristic.
   try {
     return await callDeepSeek(books);
   } catch (err) {
-    console.warn('[auto-tag] deepseek failed, trying openai', err);
-    try {
-      return await callOpenAI(books);
-    } catch (err2) {
-      console.error('[auto-tag] openai failed, falling back to heuristics', err2);
-      // Fallback: empty tags; caller will apply heuristics.
-      const blank: Record<string, string[]> = {};
-      books.forEach((_b, idx) => (blank[`b${idx}`] = []));
-      return blank;
-    }
+    console.warn('[auto-tag] deepseek failed, falling back to heuristics', err);
+    const blank: Record<string, string[]> = {};
+    books.forEach((_b, idx) => (blank[`b${idx}`] = []));
+    return blank;
   }
 }
 

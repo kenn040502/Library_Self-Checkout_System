@@ -2,247 +2,159 @@
 
 [![Test Build Next.js in Ubuntu](https://github.com/Kidemi04/Library_Self-Checkout_System/actions/workflows/test.yml/badge.svg)](https://github.com/Kidemi04/Library_Self-Checkout_System/actions/workflows/test.yml)
 
-Web-based library self-checkout platform built with **Next.js 15 (App Router)**, **Supabase**, **NextAuth (Azure AD)**, and a mobile-friendly dashboard for circulation workflows.
-
----
+Web-based library self-checkout platform built with **Next.js 15**, **React 19**, **Supabase**, **NextAuth Azure AD**, and **Tailwind CSS**.
 
 ## Features
 
-- **Library Circulation**
-  - Checkout / check-in flow
-  - Active loans & overdue tracking
-  - Hold placement and queue processing
-  - Copy status and damage reporting workflows
+- Barcode-based checkout and check-in
+- Active loans, overdue tracking, renewals, holds, and damage reports
+- Student, staff, and admin dashboards with role-based access
+- Book catalogue, copy management, categories, tags, and cover images
+- In-app notifications for circulation events
+- Reading assistant and recommendations powered by DeepSeek
+- Optional LinkedIn Learning, YouTube, SIP2, and MCP recommendation integrations
 
-- **Catalog Management**
-  - Book listing, search, and detail pages
-  - Copy record management (barcode-based)
-  - Tag/category support for books
-
-- **Authentication & Roles**
-  - Azure AD login via NextAuth
-  - Role-based access (`user`, `staff`, `admin`)
-  - Profile management and user administration
-
-- **Integrations**
-  - Supabase (PostgreSQL + Storage)
-  - LinkedIn Learning module (live API or local stub)
-  - SIP2 support (external circulation interoperability)
-  - Optional MCP recommendation server (`mcp/server.mjs`)
-
----
-
-## Tech Stack
-
-- **Frontend**: Next.js 15, React 19, Tailwind CSS
-- **Backend**: Next.js Route Handlers / Server Actions
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: NextAuth v5 beta + Azure AD
-- **Testing**: Jest + Testing Library
-
----
-
-## Getting Started
-
-### 1) Prerequisites
+## Requirements
 
 - Node.js 18+
 - pnpm
 - Supabase project
-- Azure AD App Registration
+- Azure AD app registration for production login
+- DeepSeek API key for AI features
 
-Install pnpm (if needed):
+Install pnpm if needed:
 
 ```bash
 npm install -g pnpm
 ```
 
-### 2) Installation
+## Local Setup
 
 ```bash
-git clone https://github.com/Kidemi04/Library_Self-Checkout_System.git
-cd Library_Self-Checkout_System
 pnpm install
-```
-
-### 3) Environment Variables
-
-Copy and configure env file:
-
-```bash
 cp .env.example .env.local
 ```
 
-Then fill values in `.env.local`.
+Fill `.env.local` before running the app. Never commit real secrets.
 
-### 4) Run development server
+For local development without Azure AD, enable the dev bypass:
+
+```env
+DEV_BYPASS_AUTH=true
+DEV_BYPASS_ROLE=admin
+DEV_BYPASS_EMAIL=library.dev@example.com
+DEV_BYPASS_NAME=Library Developer
+DEV_BYPASS_USER_ID=dev-user
+```
+
+Start the dev server:
 
 ```bash
 pnpm dev
 ```
 
-Open: `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000).
 
----
+## Database Setup
 
-## Environment Variables Reference
+Use a fresh Supabase project/database. The setup script refuses to run if `public."Users"` already exists, so it does not accidentally reinitialize an existing database.
 
-Main variables from `.env.example`:
-
-### Supabase / Database
+1. Copy the Supabase direct/non-pooling Postgres connection string into `.env.local`:
 
 ```env
-POSTGRES_URL=
-POSTGRES_PRISMA_URL=
-POSTGRES_URL_NON_POOLING=
-POSTGRES_USER=
-POSTGRES_HOST=
-POSTGRES_PASSWORD=
-POSTGRES_DATABASE=
+POSTGRES_URL_NON_POOLING=postgres://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+```
 
+2. Check the SQL plan:
+
+```bash
+pnpm db:setup:dry-run
+```
+
+3. Apply the schema:
+
+```bash
+pnpm db:setup
+```
+
+This applies:
+
+- `supabase/schema.sql`
+- `supabase/migrations/20260507_notification_flags.sql`
+- `supabase/migrations/20260511_drop_ai_chat_history.sql`
+- `supabase/migrations/20260524_general_chat_history_metadata.sql`
+- `supabase/migrations/20260604_damage_reports_resolution.sql`
+
+To also seed demo catalogue data from Open Library, first fill:
+
+```env
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-### NextAuth + Azure AD
+Then run:
+
+```bash
+pnpm db:setup:with-seed
+```
+
+The seed step is optional and uses `scripts/seed-books-bulk.mjs`.
+
+## Environment Variables
+
+Use `.env.example` as the source of truth. Important values:
 
 ```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+POSTGRES_URL_NON_POOLING=
+
 AZURE_AD_CLIENT_ID=
 AZURE_AD_CLIENT_SECRET=
 AZURE_AD_TENANT_ID=
 NEXTAUTH_SECRET=
 NEXTAUTH_URL=http://localhost:3000
 AUTH_URL=http://localhost:3000/api/auth
-```
 
-### AI / LLM Provider (DeepSeek)
-
-DeepSeek is the only LLM provider. `DEEPSEEK_API_KEY` is server-only. `/api/reading-assistant` returns an SSE `text/event-stream`, not JSON.
-
-```env
 DEEPSEEK_API_KEY=
 DEEPSEEK_MODEL=deepseek-v4-flash
 DEEPSEEK_API_BASE_URL=https://api.deepseek.com
-DEEPSEEK_TIMEOUT_MS=15000
-DEEPSEEK_STREAM_TIMEOUT_MS=30000
-```
 
-OpenAI is an optional fallback for `book/auto-tag` only:
-
-```env
-OPENAI_API_KEY=
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
-```
-
-### LinkedIn Learning
-
-```env
-LINKEDIN_LEARNING_CLIENT_ID=
-LINKEDIN_LEARNING_CLIENT_SECRET=
-LINKEDIN_LEARNING_ORGANIZATION_URN=
-LINKEDIN_LEARNING_DEFAULT_LOCALE=en_US
-LINKEDIN_LEARNING_API_VERSION=202404
-LINKEDIN_LEARNING_USE_STUB=true
-LINKEDIN_LEARNING_SCOPE="learning openid profile r_liteprofile r_emailaddress organization_learning"
-```
-
-### SIP2 / Optional MCP
-
-```env
 SIP2_BASE_URL=
 SIP2_API_KEY=
-
-MCP_RECOMMENDATIONS_ENABLED=false
-MCP_SERVER_COMMAND=
-MCP_SERVER_ARGS=["mcp/server.mjs"]
+SIP2_TIMEOUT_MS=5000
 ```
 
-### Dev Testing
-
-```env
-DEV_AZURE_EMAIL_SUFFIX=
-```
-
----
-
-## Supabase Naming Convention (Project Standard)
-
-> **Required convention for this project:**
-
-- **Table names**: `PascalCase`
-- **Column names**: `snake_case`
-- **Enum type names**: `snake_case`
-- **Enum values**: `snake_case`
-
-### Example
-
-```sql
--- enum type uses snake_case
-CREATE TYPE copy_status AS ENUM (
-  'available',
-  'on_loan',
-  'lost',
-  'damaged',
-  'processing',
-  'hold_shelf'
-);
-
--- table uses PascalCase
-CREATE TABLE "Copies" (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  book_id uuid NOT NULL,
-  barcode text NOT NULL UNIQUE,
-  status copy_status NOT NULL DEFAULT 'available',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-```
-
-### Current code style alignment
-
-In code, Supabase queries follow PascalCase table names, for example:
-
-- `from('Books')`
-- `from('Copies')`
-- `from('Users')`
-- `from('Loans')`
-- `from('UserProfile')`
-
-Please keep all future schema changes aligned with this naming rule.
-
----
+If a secret should not be shared during handover, set it to `<To-be-generated>` in the shared env file.
 
 ## Scripts
 
-From `package.json`:
-
 ```bash
-pnpm dev        # Start local dev server
-pnpm build      # Production build
-pnpm start      # Run production build
-pnpm test       # Run Jest tests
-pnpm test:watch # Run tests in watch mode
+pnpm dev                 # Next.js dev server on 0.0.0.0
+pnpm dev:webpack         # Next.js dev server without Turbopack
+pnpm build               # Production build
+pnpm start               # Start production build
+pnpm test                # Jest tests
+pnpm test:watch          # Jest watch mode
+pnpm db:setup:dry-run    # Print database setup plan
+pnpm db:setup            # Apply database schema to a fresh Supabase database
+pnpm db:setup:with-seed  # Apply database schema and seed demo books
 ```
 
----
+There is no lint script in this project.
 
-## Testing
+## Supabase Naming Convention
 
-This project uses Jest + Testing Library. Existing tests are under `__tests__/`.
+- Tables use PascalCase: `Users`, `Books`, `Copies`, `Loans`
+- Columns use snake_case: `display_name`, `borrowed_at`, `target_user_id`
+- Code queries should use the existing PascalCase table names, for example `from('Books')` and `from('Users')`
 
-Run all tests:
+Supabase is the system of record for circulation state. SIP2 is auxiliary; if SIP2 fails, the app still updates Supabase.
 
-```bash
-pnpm test
-```
+## Production Notes
 
----
-
-## Notes
-
-- Supabase is the system of record for circulation state.
-- SIP2 integration is auxiliary and can be configured per environment.
-- LinkedIn Learning supports both real API mode and local stub mode.
-- Keep secrets in `.env.local` only (do not commit secrets).
+- Use Azure AD login in production.
+- Keep `SUPABASE_SERVICE_ROLE_KEY`, `AZURE_AD_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `DEEPSEEK_API_KEY`, and SIP2 credentials server-only.
+- `DEV_BYPASS_AUTH` must stay disabled in production.
+- LinkedIn Learning and YouTube integrations can run in stub/sample mode when API keys are not configured.

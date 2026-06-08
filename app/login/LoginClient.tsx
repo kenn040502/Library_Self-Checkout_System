@@ -59,10 +59,13 @@ export default function LoginClient({ callbackUrl, hasLinkedIn }: LoginClientPro
           {/* Logo */}
           <BlurFade delay={0.3} yOffset={10}>
             <Link href="/" className="block transition-transform duration-300 hover:scale-105">
-              <img
-                className="mx-auto scale-110 drop-shadow-lg"
-                src="https://www.swinburne.edu.my/wp-content/themes/mytheme-2021/images/logo-long-full.svg"
+              <Image
+                className="mx-auto h-auto w-56 max-w-full scale-110 drop-shadow-lg"
+                src="/swinburne-logo.png"
                 alt="Swinburne logo"
+                width={224}
+                height={112}
+                priority
               />
             </Link>
           </BlurFade>
