@@ -1,248 +1,151 @@
-# Library Self-Checkout System
+# Library Self-Checkout System | 图书馆自助借阅系统
 
 [![Test Build Next.js in Ubuntu](https://github.com/Kidemi04/Library_Self-Checkout_System/actions/workflows/test.yml/badge.svg)](https://github.com/Kidemi04/Library_Self-Checkout_System/actions/workflows/test.yml)
 
-Web-based library self-checkout platform built with **Next.js 15 (App Router)**, **Supabase**, **NextAuth (Azure AD)**, and a mobile-friendly dashboard for circulation workflows.
+## English
 
----
+### What is this?
 
-## Features
+Library Self-Checkout System is a web application that helps students borrow and manage library books without waiting at a service desk. It also gives library staff the tools they need to manage books, users, loans, and reports.
 
-- **Library Circulation**
-  - Checkout / check-in flow
-  - Active loans & overdue tracking
-  - Hold placement and queue processing
-  - Copy status and damage reporting workflows
+The application is designed for students, library staff, and administrators at Swinburne University of Technology Sarawak Campus.
 
-- **Catalog Management**
-  - Book listing, search, and detail pages
-  - Copy record management (barcode-based)
-  - Tag/category support for books
+### What can users do?
 
-- **Authentication & Roles**
-  - Azure AD login via NextAuth
-  - Role-based access (`user`, `staff`, `admin`)
-  - Profile management and user administration
+**Students can:**
 
-- **Integrations**
-  - Supabase (PostgreSQL + Storage)
-  - LinkedIn Learning module (live API or local stub)
-  - SIP2 support (external circulation interoperability)
-  - Optional MCP recommendation server (`mcp/server.mjs`)
+- Search the library catalogue and view book details.
+- Borrow and return books by scanning a barcode.
+- View current loans, due dates, borrowing history, and notifications.
+- Reserve books and manage holds.
+- Get book recommendations and use the reading assistant.
 
----
+**Library staff can:**
 
-## Tech Stack
+- Check books in and out for users.
+- Review loan history and damage reports.
+- Monitor book copies and their availability.
 
-- **Frontend**: Next.js 15, React 19, Tailwind CSS
-- **Backend**: Next.js Route Handlers / Server Actions
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: NextAuth v5 beta + Azure AD
-- **Testing**: Jest + Testing Library
+**Administrators can:**
 
----
+- Add and update books.
+- Manage user accounts and roles.
+- Review overdue loans and export reports.
 
-## Getting Started
+### Main technology
 
-### 1) Prerequisites
+- [Next.js](https://nextjs.org/) and React for the website.
+- [Supabase](https://supabase.com/) for the database and file storage.
+- Microsoft Azure AD and NextAuth for sign-in.
+- Tailwind CSS for the user interface.
+- Jest and Testing Library for automated tests.
 
-- Node.js 18+
-- pnpm
-- Supabase project
-- Azure AD App Registration
+### Run the project locally
 
-Install pnpm (if needed):
+#### Requirements
 
-```bash
-npm install -g pnpm
-```
+- Node.js 18 or newer.
+- [pnpm](https://pnpm.io/).
+- A Supabase project.
+- A Microsoft Azure AD application registration.
 
-### 2) Installation
+#### Setup
 
 ```bash
 git clone https://github.com/Kidemi04/Library_Self-Checkout_System.git
 cd Library_Self-Checkout_System
 pnpm install
-```
-
-### 3) Environment Variables
-
-Copy and configure env file:
-
-```bash
 cp .env.example .env.local
-```
-
-Then fill values in `.env.local`.
-
-### 4) Run development server
-
-```bash
 pnpm dev
 ```
 
-Open: `http://localhost:3000`
+Add your Supabase and Azure AD settings to `.env.local` before signing in. Optional integrations, such as DeepSeek, LinkedIn Learning, SIP2, and the recommendation server, are also explained in `.env.example`.
+
+Open [http://localhost:3000](http://localhost:3000) in a browser.
+
+### Useful commands
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start the development server. |
+| `pnpm build` | Create a production build. |
+| `pnpm start` | Run the production build. |
+| `pnpm test` | Run all automated tests. |
+| `pnpm test:watch` | Run tests in watch mode. |
+
+> Keep passwords, API keys, and other secrets in `.env.local`. Never commit them to Git.
 
 ---
 
-## Environment Variables Reference
+## 中文（简体）
 
-Main variables from `.env.example`:
+### 这是什么项目？
 
-### Supabase / Database
+图书馆自助借阅系统是一个网页应用。学生可以使用本系统自行借阅和管理图书，不必在服务柜台排队。图书馆工作人员也可以通过本系统管理图书、用户、借阅记录和报告。
 
-```env
-POSTGRES_URL=
-POSTGRES_PRISMA_URL=
-POSTGRES_URL_NON_POOLING=
-POSTGRES_USER=
-POSTGRES_HOST=
-POSTGRES_PASSWORD=
-POSTGRES_DATABASE=
+本系统为斯威本科技大学砂拉越校区的学生、图书馆工作人员和管理员而设计。
 
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-```
+### 用户可以做什么？
 
-### NextAuth + Azure AD
+**学生可以：**
 
-```env
-AZURE_AD_CLIENT_ID=
-AZURE_AD_CLIENT_SECRET=
-AZURE_AD_TENANT_ID=
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=http://localhost:3000
-AUTH_URL=http://localhost:3000/api/auth
-```
+- 搜索馆藏并查看图书详情。
+- 扫描条形码来借书和还书。
+- 查看当前借阅、到期日期、借阅历史和通知。
+- 预约图书并管理预约记录。
+- 获取图书推荐并使用阅读助手。
 
-### AI / LLM Provider (DeepSeek)
+**图书馆工作人员可以：**
 
-DeepSeek is the only LLM provider. `DEEPSEEK_API_KEY` is server-only. `/api/reading-assistant` returns an SSE `text/event-stream`, not JSON.
+- 协助用户办理借书和还书。
+- 查看借阅历史和图书损坏报告。
+- 检查馆藏副本及其可借状态。
 
-```env
-DEEPSEEK_API_KEY=
-DEEPSEEK_MODEL=deepseek-v4-flash
-DEEPSEEK_API_BASE_URL=https://api.deepseek.com
-DEEPSEEK_TIMEOUT_MS=15000
-DEEPSEEK_STREAM_TIMEOUT_MS=30000
-```
+**管理员可以：**
 
-OpenAI is an optional fallback for `book/auto-tag` only:
+- 添加和更新图书资料。
+- 管理用户账户和权限。
+- 查看逾期借阅并导出报告。
 
-```env
-OPENAI_API_KEY=
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
-```
+### 主要技术
 
-### LinkedIn Learning
+- 使用 [Next.js](https://nextjs.org/) 和 React 构建网站。
+- 使用 [Supabase](https://supabase.com/) 提供数据库和文件存储。
+- 使用 Microsoft Azure AD 和 NextAuth 登录。
+- 使用 Tailwind CSS 设计用户界面。
+- 使用 Jest 和 Testing Library 进行自动化测试。
 
-```env
-LINKEDIN_LEARNING_CLIENT_ID=
-LINKEDIN_LEARNING_CLIENT_SECRET=
-LINKEDIN_LEARNING_ORGANIZATION_URN=
-LINKEDIN_LEARNING_DEFAULT_LOCALE=en_US
-LINKEDIN_LEARNING_API_VERSION=202404
-LINKEDIN_LEARNING_USE_STUB=true
-LINKEDIN_LEARNING_SCOPE="learning openid profile r_liteprofile r_emailaddress organization_learning"
-```
+### 在本地运行项目
 
-### SIP2 / Optional MCP
+#### 环境要求
 
-```env
-SIP2_BASE_URL=
-SIP2_API_KEY=
+- Node.js 18 或更高版本。
+- [pnpm](https://pnpm.io/)。
+- 一个 Supabase 项目。
+- 一个 Microsoft Azure AD 应用注册。
 
-MCP_RECOMMENDATIONS_ENABLED=false
-MCP_SERVER_COMMAND=
-MCP_SERVER_ARGS=["mcp/server.mjs"]
-```
-
-### Dev Testing
-
-```env
-DEV_AZURE_EMAIL_SUFFIX=
-```
-
----
-
-## Supabase Naming Convention (Project Standard)
-
-> **Required convention for this project:**
-
-- **Table names**: `PascalCase`
-- **Column names**: `snake_case`
-- **Enum type names**: `snake_case`
-- **Enum values**: `snake_case`
-
-### Example
-
-```sql
--- enum type uses snake_case
-CREATE TYPE copy_status AS ENUM (
-  'available',
-  'on_loan',
-  'lost',
-  'damaged',
-  'processing',
-  'hold_shelf'
-);
-
--- table uses PascalCase
-CREATE TABLE "Copies" (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  book_id uuid NOT NULL,
-  barcode text NOT NULL UNIQUE,
-  status copy_status NOT NULL DEFAULT 'available',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-```
-
-### Current code style alignment
-
-In code, Supabase queries follow PascalCase table names, for example:
-
-- `from('Books')`
-- `from('Copies')`
-- `from('Users')`
-- `from('Loans')`
-- `from('UserProfile')`
-
-Please keep all future schema changes aligned with this naming rule.
-
----
-
-## Scripts
-
-From `package.json`:
+#### 安装与启动
 
 ```bash
-pnpm dev        # Start local dev server
-pnpm build      # Production build
-pnpm start      # Run production build
-pnpm test       # Run Jest tests
-pnpm test:watch # Run tests in watch mode
+git clone https://github.com/Kidemi04/Library_Self-Checkout_System.git
+cd Library_Self-Checkout_System
+pnpm install
+cp .env.example .env.local
+pnpm dev
 ```
 
----
+登录前，请在 `.env.local` 中填写 Supabase 和 Azure AD 配置。DeepSeek、LinkedIn Learning、SIP2 和推荐服务器等可选集成的配置说明可在 `.env.example` 中找到。
 
-## Testing
+在浏览器中打开 [http://localhost:3000](http://localhost:3000)。
 
-This project uses Jest + Testing Library. Existing tests are under `__tests__/`.
+### 常用命令
 
-Run all tests:
+| 命令 | 用途 |
+| --- | --- |
+| `pnpm dev` | 启动开发服务器。 |
+| `pnpm build` | 创建生产版本。 |
+| `pnpm start` | 运行生产版本。 |
+| `pnpm test` | 运行全部自动化测试。 |
+| `pnpm test:watch` | 以监听模式运行测试。 |
 
-```bash
-pnpm test
-```
-
----
-
-## Notes
-
-- Supabase is the system of record for circulation state.
-- SIP2 integration is auxiliary and can be configured per environment.
-- LinkedIn Learning supports both real API mode and local stub mode.
-- Keep secrets in `.env.local` only (do not commit secrets).
+> 请将密码、API 密钥和其他机密信息保存在 `.env.local` 中，切勿提交到 Git。
